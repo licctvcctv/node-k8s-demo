@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    scrape_configs:
+      # 监控K8s节点
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - source_labels: [__address__]
+          regex: '(.*):10250'
+          replacement: '${1}:9100'
+          target_label: __address__
+          
+      # 监控cloud-shop微服务
+      - job_name: 'cloud-shop-services'
+        kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names:
+            - cloud-shop
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          action: keep
+          regex: (user-service|product-service|order-service)
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          target_label: service
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: pod
+          
+      # 监控K8s服务
+      - job_name: 'kubernetes-services'
+        kubernetes_sd_configs:
+        - role: service
+          namespaces:
+            names:
+            - cloud-shop
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+        - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+          action: replace
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          replacement: $1:$2
+          target_label: __address__
+          
+      # 监控Redis
+      - job_name: 'redis'
+        static_configs:
+        - targets: ['redis.cloud-shop.svc.cluster.local:6379']
+          labels:
+            service: 'redis'
+            namespace: 'cloud-shop'

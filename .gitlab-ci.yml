@@ -1,0 +1,95 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  NAMESPACE: cloud-shop
+
+# Test stage
+test:user-service:
+  stage: test
+  image: node:18-alpine
+  script:
+    - cd services/user-service
+    - npm ci
+    - npm test
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: services/user-service/coverage/cobertura-coverage.xml
+
+test:product-service:
+  stage: test
+  image: node:18-alpine
+  script:
+    - cd services/product-service
+    - npm ci
+    - npm test
+
+test:order-service:
+  stage: test
+  image: node:18-alpine
+  script:
+    - cd services/order-service
+    - npm ci
+    - npm test
+
+# Build stage
+build:user-service:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t cloud-shop/user-service:$CI_COMMIT_SHORT_SHA ./services/user-service
+    - docker tag cloud-shop/user-service:$CI_COMMIT_SHORT_SHA cloud-shop/user-service:latest
+  only:
+    - main
+    - develop
+
+build:product-service:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t cloud-shop/product-service:$CI_COMMIT_SHORT_SHA ./services/product-service
+    - docker tag cloud-shop/product-service:$CI_COMMIT_SHORT_SHA cloud-shop/product-service:latest
+  only:
+    - main
+    - develop
+
+build:order-service:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t cloud-shop/order-service:$CI_COMMIT_SHORT_SHA ./services/order-service
+    - docker tag cloud-shop/order-service:$CI_COMMIT_SHORT_SHA cloud-shop/order-service:latest
+  only:
+    - main
+    - develop
+
+# Deploy stage
+deploy:k8s:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl apply -f k8s/namespace.yaml
+    - kubectl apply -f k8s/redis/
+    - kubectl apply -f k8s/user-service/
+    - kubectl apply -f k8s/product-service/
+    - kubectl apply -f k8s/order-service/
+    - kubectl apply -f k8s/monitoring/
+    - kubectl rollout status deployment/user-service -n $NAMESPACE
+    - kubectl rollout status deployment/product-service -n $NAMESPACE
+    - kubectl rollout status deployment/order-service -n $NAMESPACE
+  only:
+    - main
+  when: manual
