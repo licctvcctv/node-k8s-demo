@@ -364,7 +364,7 @@ deploy_jenkins_cicd() {
       jenkins/jenkins:lts > /dev/null
     
     show_info "等待Jenkins启动..."
-    sleep 15
+    sleep 20
     
     # 等待Jenkins可访问
     for i in {1..20}; do
@@ -376,19 +376,28 @@ deploy_jenkins_cicd() {
     done
     echo ""
     
-    # 获取初始密码
-    local initial_password=""
-    for i in {1..10}; do
-        if docker exec jenkins-cloud-shop test -f /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null; then
-            initial_password=$(docker exec jenkins-cloud-shop cat /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null || echo "获取失败")
-            break
-        fi
-        echo "等待Jenkins初始化..."
-        sleep 3
-    done
+    show_progress "Jenkins容器部署完成"
     
-    show_progress "Jenkins部署完成"
-    echo "📋 Jenkins初始密码: $initial_password"
+    # 自动配置Jenkins Pipeline
+    show_info "自动配置Jenkins Pipeline项目..."
+    if [ -f "$PROJECT_DIR/jenkins-auto-setup.sh" ]; then
+        chmod +x "$PROJECT_DIR/jenkins-auto-setup.sh"
+        "$PROJECT_DIR/jenkins-auto-setup.sh"
+        show_progress "Jenkins Pipeline项目自动配置完成"
+    else
+        show_warning "未找到Jenkins自动配置脚本"
+        # 获取初始密码作为备用
+        local initial_password=""
+        for i in {1..10}; do
+            if docker exec jenkins-cloud-shop test -f /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null; then
+                initial_password=$(docker exec jenkins-cloud-shop cat /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null || echo "获取失败")
+                break
+            fi
+            echo "等待Jenkins初始化..."
+            sleep 3
+        done
+        echo "📋 Jenkins初始密码: $initial_password"
+    fi
 }
 
 # 验证部署
@@ -454,7 +463,9 @@ show_final_summary() {
     echo "   └─ 真实数据监控 (连接Redis获取真实业务数据)"
     echo ""
     echo "🔄 Jenkins CI/CD http://localhost:8080"
-    echo "   └─ 完整的构建和部署流水线"
+    echo "   ├─ 用户名: admin / 密码: admin123"
+    echo "   ├─ Pipeline项目: cloud-native-shop-pipeline"
+    echo "   └─ 完整的构建和部署流水线 (已自动配置)"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "${NC}"
     
@@ -475,7 +486,8 @@ show_final_summary() {
     echo "3. 体验购买流程:    浏览商品 → 加入购物车 → 结算 → 下单"
     echo "4. 查看订单:        http://$node_ip:30083"
     echo "5. 监控系统:        http://$node_ip:30084"
-    echo "6. Jenkins构建:     http://localhost:8080"
+    echo "6. Jenkins CI/CD:   http://localhost:8080 (admin/admin123)"
+    echo "   └─ 点击 'cloud-native-shop-pipeline' → '立即构建'"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "${NC}"
     
