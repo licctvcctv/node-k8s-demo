@@ -1,6 +1,6 @@
 #!/bin/bash
-# 🚀 云原生商城 - 一键全部部署脚本（修复版）
-# 修复：Worker节点代码同步、npm网络问题、完整功能部署
+# 🚀 云原生商城 - 一键全部部署脚本（最终修复版）
+# 修复：使用ConfigMap部署完整代码，确保所有文件都能正确加载
 
 set -e
 
@@ -45,7 +45,7 @@ main() {
     echo -e "${CYAN}"
     echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉"
     echo "🎉                                                    🎉"
-    echo "🎉      云原生商城 - 一键全部部署系统（修复版）       🎉"
+    echo "🎉      云原生商城 - 一键全部部署系统（最终版）       🎉"
     echo "🎉                                                    🎉"
     echo "🎉   🛒 E-Commerce + ☸️  K8s + 🔄 CI/CD + 📊 Monitor  🎉"
     echo "🎉                                                    🎉"
@@ -54,9 +54,6 @@ main() {
     
     # 检查环境
     check_prerequisites
-    
-    # 同步代码到Worker节点（关键修复）
-    sync_code_to_workers
     
     # 部署步骤
     deploy_kubernetes_services
@@ -113,51 +110,6 @@ check_port() {
     fi
 }
 
-# 同步代码到Worker节点（新增关键函数）
-sync_code_to_workers() {
-    show_section "🔄 同步代码到Worker节点"
-    
-    # 获取Worker节点列表
-    WORKERS=$(kubectl get nodes --no-headers | grep -v master | awk '{print $1}')
-    
-    if [ -z "$WORKERS" ]; then
-        show_warning "没有发现Worker节点，将继续部署（单节点模式）"
-        return
-    fi
-    
-    show_info "发现Worker节点: $(echo $WORKERS | tr '\n' ' ')"
-    
-    # 同步到每个Worker节点
-    for worker in $WORKERS; do
-        show_info "同步代码到 $worker..."
-        
-        # 检查SSH连接
-        if ! ssh -o ConnectTimeout=5 -o BatchMode=yes root@$worker "echo 'SSH OK'" &>/dev/null; then
-            show_warning "无法SSH连接到 $worker，尝试手动同步"
-            echo "请手动执行："
-            echo "  scp -r $PROJECT_DIR root@$worker:$PROJECT_DIR"
-            continue
-        fi
-        
-        # 创建目标目录
-        ssh root@$worker "mkdir -p $PROJECT_DIR" 2>/dev/null
-        
-        # 同步项目文件
-        if rsync -avz --delete "$PROJECT_DIR/" "root@$worker:$PROJECT_DIR/" &>/dev/null; then
-            show_progress "$worker 同步成功"
-        else
-            # 如果rsync不可用，使用scp
-            if scp -r "$PROJECT_DIR"/* "root@$worker:$PROJECT_DIR/" &>/dev/null; then
-                show_progress "$worker 同步成功 (使用scp)"
-            else
-                show_error "$worker 同步失败"
-            fi
-        fi
-    done
-    
-    show_progress "代码同步完成"
-}
-
 # 部署Kubernetes服务
 deploy_kubernetes_services() {
     show_section "2️⃣  部署Kubernetes服务"
@@ -171,6 +123,10 @@ deploy_kubernetes_services() {
     kubectl create namespace $NAMESPACE
     show_progress "命名空间创建完成"
     
+    # 创建shared ConfigMap（重要：包含auth.js）
+    show_info "创建共享配置..."
+    create_shared_configmap
+    
     show_info "部署Redis数据库..."
     deploy_redis
     show_progress "Redis部署完成"
@@ -181,6 +137,22 @@ deploy_kubernetes_services() {
     
     show_info "等待Pod启动..."
     wait_for_pods
+}
+
+# 创建shared ConfigMap
+create_shared_configmap() {
+    # 检查shared/auth.js是否存在
+    if [ ! -f "$PROJECT_DIR/services/shared/auth.js" ]; then
+        show_error "找不到 services/shared/auth.js 文件"
+        exit 1
+    fi
+    
+    # 创建ConfigMap
+    kubectl create configmap shared-auth \
+        --from-file=auth.js="$PROJECT_DIR/services/shared/auth.js" \
+        -n $NAMESPACE
+    
+    show_progress "共享认证模块ConfigMap创建完成"
 }
 
 # 部署Redis
@@ -228,18 +200,18 @@ EOF
 # 部署微服务
 deploy_microservices() {
     # 用户服务
-    deploy_service "user-service" 8081 30081 "redis://redis:6379" '
+    deploy_service_with_code "user-service" 8081 30081 "redis://redis:6379" '
         - name: JWT_SECRET
           value: "cloud-shop-secret-key-2024"'
     
     # 商品服务
-    deploy_service "product-service" 8082 30082 "redis://redis:6379" ""
+    deploy_service_with_code "product-service" 8082 30082 "redis://redis:6379" ""
     
     # 订单服务
-    deploy_service "order-service" 8083 30083 "redis://redis:6379" ""
+    deploy_service_with_code "order-service" 8083 30083 "redis://redis:6379" ""
     
     # 监控服务
-    deploy_service "dashboard-service" 8084 30084 "redis://redis:6379" '
+    deploy_service_with_code "dashboard-service" 8084 30084 "redis://redis:6379" '
         - name: USER_SERVICE_URL
           value: "http://user-service:8081"
         - name: PRODUCT_SERVICE_URL
@@ -248,100 +220,103 @@ deploy_microservices() {
           value: "http://order-service:8083"'
 }
 
-# 通用服务部署函数 - 修复版
-deploy_service() {
+# 通用服务部署函数 - 包含完整代码
+deploy_service_with_code() {
     local service_name=$1
     local container_port=$2
     local node_port=$3
     local redis_url=$4
     local extra_env=$5
     
-    # 检查服务代码是否存在
-    local has_real_code="false"
-    if [ -f "$PROJECT_DIR/services/$service_name/index.js" ]; then
-        has_real_code="true"
-        show_info "发现 $service_name 的实际代码"
-        # 获取文件列表
-        ls "$PROJECT_DIR/services/$service_name/" | head -20 | xargs echo "文件:" || true
+    show_info "部署 $service_name..."
+    
+    # 创建临时目录
+    local temp_dir=$(mktemp -d)
+    
+    # 复制服务文件
+    if [ -d "$PROJECT_DIR/services/$service_name" ]; then
+        cp -rL "$PROJECT_DIR/services/$service_name"/* "$temp_dir/" 2>/dev/null || true
+        
+        # 确保有基础的package.json
+        if [ ! -f "$temp_dir/package.json" ]; then
+            cat > "$temp_dir/package.json" <<PKGEOF
+{
+  "name": "$service_name",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "redis": "^4.6.5",
+    "cors": "^2.8.5",
+    "axios": "^1.4.0",
+    "jsonwebtoken": "^9.0.0",
+    "bcryptjs": "^2.4.3",
+    "helmet": "^7.0.0",
+    "morgan": "^1.10.0"
+  }
+}
+PKGEOF
+        fi
+        
+        # 确保有基础的index.js（如果不存在）
+        if [ ! -f "$temp_dir/index.js" ]; then
+            cat > "$temp_dir/index.js" <<INDEXEOF
+const express = require('express');
+const path = require('path');
+const app = express();
+const PORT = process.env.PORT || $container_port;
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 提供shared/auth.js
+app.get('/auth.js', (req, res) => {
+    res.sendFile('/shared/auth.js');
+});
+
+// 健康检查
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', service: '$service_name' });
+});
+
+// 主页
+app.get('/', (req, res) => {
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    if (require('fs').existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.send('<h1>$service_name is running!</h1><p>Port: ' + PORT + '</p>');
+    }
+});
+
+app.listen(PORT, () => {
+    console.log('$service_name running on port ' + PORT);
+});
+INDEXEOF
+        fi
     else
-        show_warning "$service_name 没有找到实际代码，将使用基础模板"
+        show_warning "$service_name 服务目录不存在"
     fi
     
-    # 创建ConfigMap存储基础代码
+    # 创建ConfigMap - 修复：使用tar打包确保包含所有子目录
+    cd "$temp_dir"
+    tar -czf /tmp/${service_name}-app.tar.gz .
+    kubectl create configmap $service_name-app \
+        --from-file=app.tar.gz=/tmp/${service_name}-app.tar.gz \
+        -n $NAMESPACE \
+        --dry-run=client -o yaml | kubectl apply -f - || {
+        show_error "创建 $service_name ConfigMap 失败"
+    }
+    rm -f /tmp/${service_name}-app.tar.gz
+    cd - > /dev/null
+    
+    # 清理临时目录
+    rm -rf "$temp_dir"
+    
+    # 创建Deployment
     cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: $service_name-base
-  namespace: $NAMESPACE
-data:
-  package.json: |
-    {
-      "name": "$service_name",
-      "version": "1.0.0",
-      "scripts": {
-        "start": "node index.js"
-      },
-      "dependencies": {
-        "express": "^4.18.2",
-        "redis": "^4.6.5",
-        "cors": "^2.8.5",
-        "axios": "^1.4.0",
-        "jsonwebtoken": "^9.0.0",
-        "bcryptjs": "^2.4.3"
-      }
-    }
-  index.js: |
-    const express = require('express');
-    const app = express();
-    const PORT = process.env.PORT || $container_port;
-    
-    // 健康检查
-    app.get('/health', (req, res) => {
-      res.json({ status: 'ok', service: '$service_name' });
-    });
-    
-    // 主页
-    app.get('/', (req, res) => {
-      res.send('<h1>${service_name} is running!</h1><p>Port: ' + PORT + '</p>');
-    });
-    
-    // API端点
-    app.get('/api/status', (req, res) => {
-      res.json({ 
-        service: '$service_name',
-        status: 'running',
-        port: PORT,
-        timestamp: new Date().toISOString()
-      });
-    });
-    
-    // 静态文件（如果存在）
-    const fs = require('fs');
-    if (fs.existsSync('/app/public')) {
-      app.use(express.static('/app/public'));
-    }
-    
-    // 错误处理
-    app.use((err, req, res, next) => {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error' });
-    });
-    
-    // 启动服务器
-    const server = app.listen(PORT, () => {
-      console.log('$service_name running on port ' + PORT);
-    });
-    
-    // 优雅关闭
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received, shutting down gracefully');
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
-    });
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -366,101 +341,58 @@ spec:
             set -e
             echo "Starting setup for $service_name..."
             
-            # 复制基础代码
-            cp /config/* /app/
-            cd /app
-            
-            # 检查并复制主机代码（修复：更好的检查逻辑）
-            if [ -d /host-code ]; then
-              echo "Checking /host-code directory..."
-              ls -la /host-code || true
-              
-              # 复制所有文件，包括隐藏文件
-              if [ "\$(ls -A /host-code 2>/dev/null | wc -l)" -gt 0 ]; then
-                echo "Found files in /host-code, copying..."
-                cp -r /host-code/. /app/ || true
-                echo "Files copied from host"
-              else
-                echo "No files found in /host-code"
-              fi
+            # 解压应用代码
+            if [ -f /app-config/app.tar.gz ]; then
+                echo "解压应用代码..."
+                tar -xzf /app-config/app.tar.gz -C /app/
             else
-              echo "/host-code directory not mounted"
+                echo "错误：找不到app.tar.gz文件"
+                exit 1
             fi
             
-            # 显示最终的文件结构
-            echo "Final app directory structure:"
+            # 创建shared目录并复制auth.js
+            mkdir -p /app/shared
+            cp /shared-auth/auth.js /app/shared/auth.js
+            
+            # 显示文件结构
+            echo "App directory structure:"
             ls -la /app/
+            if [ -d /app/public ]; then
+                echo "Public directory contents:"
+                ls -la /app/public/ | head -10
+            fi
             
-            # npm安装修复流程
-            echo "Setting up npm environment..."
+            cd /app
             
-            # 清理npm缓存
-            npm cache clean --force
-            
-            # 删除可能有问题的锁文件
-            rm -f package-lock.json npm-shrinkwrap.json
-            
-            # 配置npm设置 - 使用国内镜像源（关键修复）
+            # 设置npm镜像源
             npm config set registry https://registry.npmmirror.com/
             npm config delete proxy || true
             npm config delete https-proxy || true
             npm config set strict-ssl false
-            npm config set fetch-retry-mintimeout 20000
-            npm config set fetch-retry-maxtimeout 120000
-            npm config set fetch-retries 3
             
-            echo "Using npm registry: \$(npm config get registry)"
-            npm --version
-            
-            # 检查package.json是否存在
+            # 安装依赖
             if [ -f package.json ]; then
-              echo "Found package.json, installing dependencies..."
-              cat package.json
-              
-              # 使用npm install
-              echo "Running npm install..."
-              npm install --production --no-audit --no-fund --verbose || {
-                echo "First attempt failed, retrying with different registry..."
-                npm config set registry https://registry.npmjs.org/
-                npm install --production --no-audit --no-fund --verbose || {
-                  echo "npm install failed, but continuing..."
+                echo "Installing dependencies..."
+                npm install --production --no-audit --no-fund || {
+                    echo "Retry with npmjs registry..."
+                    npm config set registry https://registry.npmjs.org/
+                    npm install --production --no-audit --no-fund || echo "npm install failed but continuing..."
                 }
-              }
-              
-              echo "npm install completed!"
-              ls -la node_modules/ 2>/dev/null | head -20 || echo "node_modules not created"
-            else
-              echo "ERROR: No package.json found!"
-              exit 1
             fi
             
-            # 最终验证
-            echo "Final verification..."
-            if [ -d node_modules ]; then
-              echo "✅ node_modules exists"
-              echo "Package count: \$(ls node_modules | wc -l)"
-            else
-              echo "❌ node_modules missing"
-            fi
-            
-            # 检查关键文件
-            echo "Checking key files:"
-            [ -f index.js ] && echo "✅ index.js exists" || echo "❌ index.js missing"
-            [ -d public ] && echo "✅ public/ exists" || echo "❌ public/ missing"
-            
-            echo "Init container setup completed!"
+            echo "Setup completed!"
         volumeMounts:
-        - name: app-code
+        - name: app
           mountPath: /app
-        - name: config
-          mountPath: /config
-        - name: host-code
-          mountPath: /host-code
+        - name: app-config
+          mountPath: /app-config
+        - name: shared-auth
+          mountPath: /shared-auth
       containers:
       - name: $service_name
-        image: node:16-alpine
+        image: node:18-alpine
         workingDir: /app
-        command: ["npm", "start"]
+        command: ["node", "index.js"]
         ports:
         - containerPort: $container_port
         env:
@@ -469,8 +401,10 @@ spec:
         - name: PORT
           value: "$container_port"$extra_env
         volumeMounts:
-        - name: app-code
+        - name: app
           mountPath: /app
+        - name: shared-auth
+          mountPath: /shared
         resources:
           limits:
             memory: "512Mi"
@@ -482,7 +416,7 @@ spec:
           httpGet:
             path: /health
             port: $container_port
-          initialDelaySeconds: 60
+          initialDelaySeconds: 90
           periodSeconds: 30
           timeoutSeconds: 5
           failureThreshold: 3
@@ -490,20 +424,19 @@ spec:
           httpGet:
             path: /health
             port: $container_port
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
       volumes:
-      - name: app-code
+      - name: app
         emptyDir: {}
-      - name: config
+      - name: app-config
         configMap:
-          name: $service_name-base
-      - name: host-code
-        hostPath:
-          path: $PROJECT_DIR/services/$service_name
-          type: DirectoryOrCreate
+          name: $service_name-app
+      - name: shared-auth
+        configMap:
+          name: shared-auth
 ---
 apiVersion: v1
 kind: Service
@@ -519,12 +452,14 @@ spec:
     nodePort: $node_port
   type: NodePort
 EOF
+    
+    show_progress "$service_name 部署完成"
 }
 
 # 等待Pod启动
 wait_for_pods() {
-    echo "等待Pod初始化（60秒）..."
-    sleep 60
+    echo "等待Pod初始化（90秒）..."
+    sleep 90
     
     echo "检查Pod状态..."
     kubectl get pods -n $NAMESPACE
@@ -537,13 +472,13 @@ wait_for_pods() {
         echo "第 $attempt 次检查（共${max_attempts}次）..."
         
         # 获取未就绪的Pod数量
-        local not_ready=$(kubectl get pods -n $NAMESPACE -o json | jq '[.items[] | select(.status.conditions[] | select(.type=="Ready" and .status!="True"))] | length')
+        local not_ready=$(kubectl get pods -n $NAMESPACE -o json | jq '[.items[] | select(.status.conditions[] | select(.type=="Ready" and .status!="True"))] | length' 2>/dev/null || echo "1")
         
         if [ "$not_ready" -eq 0 ] 2>/dev/null; then
             show_progress "所有Pod已就绪"
             break
         else
-            kubectl get pods -n $NAMESPACE | grep -v "Running\s*1/1"
+            kubectl get pods -n $NAMESPACE | grep -v "Running.*1/1" || true
             echo "还有Pod未就绪，等待30秒..."
             sleep 30
         fi
@@ -720,6 +655,22 @@ show_final_summary() {
     echo "查看Jenkins日志:  docker logs jenkins-cloud-shop"
     echo "停止Jenkins:      docker stop jenkins-cloud-shop"
     echo "启动Jenkins:      docker start jenkins-cloud-shop"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo ""
+    echo "❓ 常见问题解决："
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "1. 如果页面显示'网络错误'："
+    echo "   - 检查auth.js是否加载: curl http://$node_ip:30081/auth.js"
+    echo "   - 查看浏览器控制台错误信息"
+    echo ""
+    echo "2. 如果Pod一直在Init状态："
+    echo "   - 查看Init日志: kubectl logs <pod> -c setup -n $NAMESPACE"
+    echo "   - 可能是npm安装超时，删除Pod重试"
+    echo ""
+    echo "3. 如果服务返回404："
+    echo "   - 检查ConfigMap: kubectl get cm -n $NAMESPACE"
+    echo "   - 进入Pod检查文件: kubectl exec -it <pod> -n $NAMESPACE -- ls -la /app/"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo ""

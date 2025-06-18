@@ -1,4 +1,4 @@
-// 云原生商城 - 统一认证模块（修复跨端口问题）
+// 云原生商城 - 统一认证模块
 // 解决跨端口token共享问题
 
 const AUTH = {
@@ -43,7 +43,7 @@ const AUTH = {
         return token;
     },
     
-    // 跨服务跳转（带token）- 修复版
+    // 跨服务跳转（带token）
     redirectWithToken(targetUrl) {
         const token = this.getToken();
         const user = this.getUser();
@@ -52,53 +52,48 @@ const AUTH = {
             return;
         }
         
-        // 直接在URL中传递加密的认证信息
+        // 生成临时key
+        const tempKey = 'auth_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // 在sessionStorage中存储认证信息
         const authData = {
             token: token,
             user: user,
             timestamp: Date.now()
         };
+        sessionStorage.setItem(tempKey, JSON.stringify(authData));
         
-        // 使用base64编码认证信息
-        const encodedAuth = btoa(encodeURIComponent(JSON.stringify(authData)));
-        
-        // 跳转时带上认证信息
+        // 跳转时带上临时key
         const separator = targetUrl.includes('?') ? '&' : '?';
-        window.location.href = `${targetUrl}${separator}auth=${encodedAuth}`;
+        window.location.href = `${targetUrl}${separator}authKey=${tempKey}`;
     },
     
-    // 接收跨服务传来的token - 修复版
+    // 接收跨服务传来的token
     receiveToken() {
         const urlParams = new URLSearchParams(window.location.search);
-        const encodedAuth = urlParams.get('auth');
+        const authKey = urlParams.get('authKey');
         
-        if (encodedAuth) {
+        if (authKey) {
             try {
-                // 解码认证信息
-                const authDataStr = decodeURIComponent(atob(encodedAuth));
-                const authData = JSON.parse(authDataStr);
-                
-                // 验证时间戳（5分钟内有效）
-                if (Date.now() - authData.timestamp < 5 * 60 * 1000) {
-                    this.saveAuth(authData.token, authData.user);
-                    console.log('跨服务认证成功');
-                } else {
-                    console.log('认证信息已过期');
+                // 尝试从sessionStorage获取认证信息
+                const authDataStr = sessionStorage.getItem(authKey);
+                if (authDataStr) {
+                    const authData = JSON.parse(authDataStr);
+                    
+                    // 验证时间戳（5分钟内有效）
+                    if (Date.now() - authData.timestamp < 5 * 60 * 1000) {
+                        this.saveAuth(authData.token, authData.user);
+                        console.log('跨服务认证成功');
+                    }
+                    
+                    // 清理临时数据
+                    sessionStorage.removeItem(authKey);
                 }
             } catch (e) {
                 console.error('接收认证信息失败:', e);
             }
             
-            // 清理URL中的auth参数
-            const newUrl = new URL(window.location);
-            newUrl.searchParams.delete('auth');
-            window.history.replaceState({}, '', newUrl.toString());
-        }
-        
-        // 向后兼容：也检查旧的authKey参数
-        const authKey = urlParams.get('authKey');
-        if (authKey) {
-            // 清理URL
+            // 清理URL中的authKey参数
             const newUrl = new URL(window.location);
             newUrl.searchParams.delete('authKey');
             window.history.replaceState({}, '', newUrl.toString());
