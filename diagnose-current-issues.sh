@@ -4,6 +4,13 @@
 echo "🔍 诊断当前问题..."
 
 echo "=========================================="
+echo "0. 清理和重新下载项目（可选）"
+echo "=========================================="
+echo "如果需要重新下载最新代码，请运行："
+echo "cd /tmp && rm -rf node-k8s-demo && git clone https://github.com/licctvcctv/node-k8s-demo.git"
+echo ""
+
+echo "=========================================="
 echo "1. 检查Pod详细状态"
 echo "=========================================="
 kubectl get pods -n cloud-shop -o wide
@@ -49,7 +56,7 @@ ORDER_POD=$(kubectl get pods -n cloud-shop -l app=order-service --no-headers | a
 if [ ! -z "$ORDER_POD" ]; then
     echo "Order Service主容器日志:"
     kubectl logs $ORDER_POD -n cloud-shop --tail=20
-    
+
     echo ""
     echo "检查Order Service内部:"
     kubectl exec $ORDER_POD -n cloud-shop -- ls -la /app/

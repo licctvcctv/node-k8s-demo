@@ -7,7 +7,13 @@ echo "1. 强制删除Kubernetes命名空间"
 kubectl delete namespace cloud-shop --force --grace-period=0 2>/dev/null || true
 sleep 5
 
-echo "2. 清理可能残留的资源"
+echo "2. 清理下载的项目目录"
+echo "清理 /tmp/node-k8s-demo..."
+rm -rf /tmp/node-k8s-demo
+echo "清理当前目录的node-k8s-demo..."
+rm -rf ./node-k8s-demo
+
+echo "3. 清理可能残留的资源"
 kubectl get namespace | grep cloud-shop && kubectl patch namespace cloud-shop -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || echo "命名空间已清理"
 
 echo "3. 停止并删除Jenkins容器"
