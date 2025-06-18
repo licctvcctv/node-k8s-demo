@@ -1,0 +1,14 @@
+npm安装问题调试报告
+生成时间: Wed Jun 18 20:25:45 CST 2025
+========================
+
+环境信息:
+- 系统: Linux dell-5515 4.4.0-22621-Microsoft #3672-Microsoft Fri Jan 01 08:00:00 PST 2016 x86_64 x86_64 x86_64 GNU/Linux
+- Docker可用: false
+- kubectl可用: false
+
+服务package.json检查:
+✅ user-service: package.json存在
+✅ product-service: package.json存在
+✅ order-service: package.json存在
+✅ dashboard-service: package.json存在

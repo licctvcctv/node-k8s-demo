@@ -332,9 +332,9 @@ spec:
             npm config set fetch-retry-maxtimeout 120000
             npm config set fetch-retries 3
             
-            # 安装npm最新版本（解决npm 8.19.4的bug）
-            echo "Upgrading npm to latest version..."
-            npm install -g npm@latest
+            # 升级npm到兼容版本（Node 18最高支持npm 10.x）
+            echo "Upgrading npm to compatible version..."
+            npm install -g npm@10.9.0
             
             # 检查package.json是否存在
             if [ -f package.json ]; then
