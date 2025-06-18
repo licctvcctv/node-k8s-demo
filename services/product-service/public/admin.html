@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - 云原生商城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+            line-height: 1.6;
+        }
+        
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #001529;
+            color: white;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 30px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #52c41a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 0;
+        }
+        
+        .menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255,255,255,0.65);
+        }
+        
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .menu-item.active {
+            background: #52c41a;
+            color: white;
+        }
+        
+        .menu-icon {
+            font-size: 18px;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .top-bar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .notification-icon {
+            font-size: 20px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4d4f;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #52c41a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-info {
+            flex: 1;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .stat-icon {
+            font-size: 48px;
+            opacity: 0.3;
+        }
+        
+        .action-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #52c41a;
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #52c41a;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #73d13d;
+        }
+        
+        .btn-default {
+            background: white;
+            border: 1px solid #d9d9d9;
+            color: #666;
+        }
+        
+        .btn-default:hover {
+            border-color: #52c41a;
+            color: #52c41a;
+        }
+        
+        .data-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #fafafa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tr:hover {
+            background: #fafafa;
+        }
+        
+        .product-name-cell {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .stock-badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .stock-high {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        
+        .stock-low {
+            background: #fff2e8;
+            color: #fa8c16;
+            border: 1px solid #ffd591;
+        }
+        
+        .stock-out {
+            background: #fff1f0;
+            color: #f5222d;
+            border: 1px solid #ffa39e;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            padding: 5px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .edit-btn {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .edit-btn:hover {
+            background: #bae7ff;
+        }
+        
+        .delete-btn {
+            background: #fff1f0;
+            color: #f5222d;
+        }
+        
+        .delete-btn:hover {
+            background: #ffccc7;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .close-btn {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #52c41a;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            gap: 5px;
+        }
+        
+        .page-btn {
+            padding: 5px 10px;
+            border: 1px solid #d9d9d9;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .page-btn:hover {
+            border-color: #52c41a;
+            color: #52c41a;
+        }
+        
+        .page-btn.active {
+            background: #52c41a;
+            color: white;
+            border-color: #52c41a;
+        }
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .success {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        
+        .error {
+            background: #fff2e8;
+            border: 1px solid #ffbb96;
+            color: #fa541c;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span>📦</span>
+                    <span>商品管理系统</span>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item active">
+                    <span class="menu-icon">📊</span>
+                    <span>数据概览</span>
+                </li>
+                <li class="menu-item">
+                    <span class="menu-icon">📦</span>
+                    <span>商品管理</span>
+                </li>
+                <li class="menu-item">
+                    <span class="menu-icon">📋</span>
+                    <span>订单管理</span>
+                </li>
+                <li class="menu-item">
+                    <span class="menu-icon">👥</span>
+                    <span>用户管理</span>
+                </li>
+                <li class="menu-item">
+                    <span class="menu-icon">📈</span>
+                    <span>数据分析</span>
+                </li>
+                <li class="menu-item">
+                    <span class="menu-icon">⚙️</span>
+                    <span>系统设置</span>
+                </li>
+                <li class="menu-item" onclick="window.location.href='/'">
+                    <span class="menu-icon">🏠</span>
+                    <span>返回商城</span>
+                </li>
+            </ul>
+        </aside>
+        
+        <main class="main-content">
+            <div class="top-bar">
+                <h1 class="page-title">商品管理</h1>
+                <div class="user-menu">
+                    <div class="notification-icon">
+                        🔔
+                        <span class="notification-badge">3</span>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">A</div>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">商品总数</div>
+                        <div class="stat-value" id="totalProducts">0</div>
+                    </div>
+                    <div class="stat-icon">📦</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">库存总量</div>
+                        <div class="stat-value" id="totalStock">0</div>
+                    </div>
+                    <div class="stat-icon">📊</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">库存总值</div>
+                        <div class="stat-value" id="totalValue">¥0</div>
+                    </div>
+                    <div class="stat-icon">💰</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">缺货商品</div>
+                        <div class="stat-value" id="outOfStock">0</div>
+                    </div>
+                    <div class="stat-icon">⚠️</div>
+                </div>
+            </div>
+            
+            <div class="action-bar">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="搜索商品名称或描述..." onkeyup="searchProducts()">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-default" onclick="exportProducts()">导出商品</button>
+                    <button class="btn btn-primary" onclick="showAddModal()">+ 添加商品</button>
+                </div>
+            </div>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>商品名称</th>
+                            <th>描述</th>
+                            <th>价格</th>
+                            <th>库存</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        <!-- 商品数据动态加载 -->
+                    </tbody>
+                </table>
+                
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-state-icon">📦</div>
+                    <p>暂无商品数据</p>
+                    <p style="font-size: 14px; margin-top: 10px;">点击"添加商品"开始管理您的商品</p>
+                </div>
+                
+                <div class="pagination" id="pagination">
+                    <!-- 分页按钮动态生成 -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 添加/编辑商品模态框 -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">添加商品</h2>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label for="productName">商品名称 *</label>
+                    <input type="text" id="productName" required placeholder="请输入商品名称">
+                </div>
+                <div class="form-group">
+                    <label for="productDesc">商品描述</label>
+                    <textarea id="productDesc" placeholder="请输入商品描述（可选）"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productPrice">价格 *</label>
+                        <input type="number" id="productPrice" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="productStock">库存 *</label>
+                        <input type="number" id="productStock" min="0" required placeholder="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="productCategory">商品分类</label>
+                    <select id="productCategory">
+                        <option value="other">其他</option>
+                        <option value="electronics">电子产品</option>
+                        <option value="books">图书</option>
+                        <option value="clothing">服装</option>
+                        <option value="food">食品</option>
+                        <option value="home">家居</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-default" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = window.location.origin;
+        let products = [];
+        let filteredProducts = [];
+        let currentPage = 1;
+        const pageSize = 10;
+        let currentToken = localStorage.getItem('token');
+        let currentUser = localStorage.getItem('username');
+        
+        // 页面加载时检查登录状态
+        window.onload = function() {
+            if (!currentToken) {
+                showMessage('请先登录', 'error');
+                setTimeout(() => {
+                    window.location.href = 'http://' + window.location.hostname + ':30081/login.html?return=' + encodeURIComponent(window.location.href);
+                }, 1500);
+                return;
+            }
+            
+            // 设置用户头像
+            if (currentUser) {
+                document.getElementById('userAvatar').textContent = currentUser[0].toUpperCase();
+            }
+            
+            loadProducts();
+        };
+        
+        // 显示消息
+        function showMessage(text, type) {
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+        
+        // 加载商品列表
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_URL}/api/products`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    products = data;
+                    filteredProducts = [...products];
+                    displayProducts();
+                    updateStats();
+                } else {
+                    showMessage('加载商品失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误', 'error');
+            }
+        }
+        
+        // 显示商品列表
+        function displayProducts() {
+            const tbody = document.getElementById('productTableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (filteredProducts.length === 0) {
+                tbody.parentElement.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            tbody.parentElement.style.display = 'table';
+            emptyState.style.display = 'none';
+            
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageProducts = filteredProducts.slice(start, end);
+            
+            tbody.innerHTML = pageProducts.map(product => `
+                <tr>
+                    <td class="product-name-cell">${product.name}</td>
+                    <td>${product.description || '-'}</td>
+                    <td>¥${product.price}</td>
+                    <td>
+                        <span class="stock-badge ${getStockClass(product.stock)}">
+                            ${product.stock}件
+                        </span>
+                    </td>
+                    <td>${getStockStatus(product.stock)}</td>
+                    <td>${new Date(product.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="action-btn edit-btn" onclick="editProduct('${product.id}')">编辑</button>
+                            <button class="action-btn delete-btn" onclick="deleteProduct('${product.id}')">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            updatePagination();
+        }
+        
+        // 获取库存样式类
+        function getStockClass(stock) {
+            if (stock === 0) return 'stock-out';
+            if (stock < 10) return 'stock-low';
+            return 'stock-high';
+        }
+        
+        // 获取库存状态
+        function getStockStatus(stock) {
+            if (stock === 0) return '已售罄';
+            if (stock < 10) return '库存紧张';
+            return '库存充足';
+        }
+        
+        // 更新统计数据
+        function updateStats() {
+            const totalProducts = products.length;
+            const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
+            const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+            const outOfStock = products.filter(p => p.stock === 0).length;
+            
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('totalStock').textContent = totalStock;
+            document.getElementById('totalValue').textContent = `¥${totalValue.toFixed(2)}`;
+            document.getElementById('outOfStock').textContent = outOfStock;
+        }
+        
+        // 搜索商品
+        function searchProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filteredProducts = products.filter(p => 
+                p.name.toLowerCase().includes(searchTerm) ||
+                (p.description && p.description.toLowerCase().includes(searchTerm))
+            );
+            currentPage = 1;
+            displayProducts();
+        }
+        
+        // 更新分页
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const totalPages = Math.ceil(filteredProducts.length / pageSize);
+            
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            pagination.style.display = 'flex';
+            
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+            }
+            
+            pagination.innerHTML = html;
+        }
+        
+        // 切换页码
+        function changePage(page) {
+            currentPage = page;
+            displayProducts();
+        }
+        
+        // 显示添加模态框
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '添加商品';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+        
+        // 编辑商品
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+            
+            document.getElementById('modalTitle').textContent = '编辑商品';
+            document.getElementById('productId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productDesc').value = product.description || '';
+            document.getElementById('productPrice').value = product.price;
+            document.getElementById('productStock').value = product.stock;
+            document.getElementById('productCategory').value = product.category || 'other';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+        
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+        
+        // 保存商品
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('productId').value;
+            const productData = {
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDesc').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                stock: parseInt(document.getElementById('productStock').value),
+                category: document.getElementById('productCategory').value
+            };
+            
+            try {
+                const url = id ? `${API_URL}/api/products/${id}` : `${API_URL}/api/products`;
+                const method = id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify(productData)
+                });
+                
+                if (response.ok) {
+                    showMessage(id ? '更新成功' : '添加成功', 'success');
+                    closeModal();
+                    loadProducts();
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || '操作失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误', 'error');
+            }
+        });
+        
+        // 删除商品
+        async function deleteProduct(id) {
+            if (!confirm('确定要删除这个商品吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/products/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showMessage('删除成功', 'success');
+                    loadProducts();
+                } else {
+                    const data = await response.json();
+                    showMessage(data.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误', 'error');
+            }
+        }
+        
+        // 导出商品
+        function exportProducts() {
+            const csvContent = [
+                ['商品名称', '描述', '价格', '库存', '创建时间'],
+                ...products.map(p => [
+                    p.name,
+                    p.description || '',
+                    p.price,
+                    p.stock,
+                    new Date(p.createdAt).toLocaleDateString()
+                ])
+            ].map(row => row.join(',')).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `products_${new Date().getTime()}.csv`;
+            link.click();
+            
+            showMessage('导出成功', 'success');
+        }
+        
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('productModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        // 定时刷新数据
+        setInterval(loadProducts, 60000);
+    </script>
+</body>
+</html>

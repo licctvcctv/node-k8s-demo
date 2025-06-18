@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 8083;
@@ -23,10 +24,15 @@ async function connectRedis() {
 }
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // 允许加载外部资源
+}));
 app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -58,7 +64,7 @@ async function verifyToken(req, res, next) {
 // Create order
 app.post('/api/orders', verifyToken, async (req, res) => {
   try {
-    const { items } = req.body;
+    const { items, shippingAddress, notes } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Items required' });
@@ -107,17 +113,25 @@ app.post('/api/orders', verifyToken, async (req, res) => {
       userId: req.user.username,
       items: orderItems,
       totalAmount,
+      shippingAddress: shippingAddress || '',
+      notes: notes || '',
       status: 'pending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
     // Update product stock
-    for (const item of items) {
+    for (const item of orderItems) {
       try {
+        // Get current product to calculate new stock
+        const productRes = await axios.get(`${PRODUCT_SERVICE_URL}/api/products/${item.productId}`);
+        const currentStock = productRes.data.stock;
+        const newStock = currentStock - item.quantity;
+        
+        // Update stock with new value
         await axios.put(
           `${PRODUCT_SERVICE_URL}/api/products/${item.productId}`,
-          { stock: item.quantity * -1 }, // Decrease stock
+          { stock: newStock },
           { headers: { 'Authorization': req.headers['authorization'] } }
         );
       } catch (error) {
@@ -138,14 +152,43 @@ app.post('/api/orders', verifyToken, async (req, res) => {
   }
 });
 
-// Get user orders
-app.get('/api/orders', verifyToken, async (req, res) => {
+// Get orders (all orders if no token, user orders if authenticated)
+app.get('/api/orders', async (req, res) => {
   try {
-    const orderIds = await redisClient.sMembers(`user:${req.user.username}:orders`);
+    const token = req.headers['authorization'];
+    
+    if (token) {
+      // If authenticated, get user-specific orders
+      try {
+        const userResponse = await axios.get(`${USER_SERVICE_URL}/api/verify`, {
+          headers: { 'Authorization': token }
+        });
+        const user = userResponse.data.user;
+        
+        const orderIds = await redisClient.sMembers(`user:${user.username}:orders`);
+        const orders = [];
+
+        for (const orderId of orderIds) {
+          const orderData = await redisClient.get(`order:${orderId}`);
+          if (orderData) {
+            orders.push(JSON.parse(orderData));
+          }
+        }
+
+        // Sort by createdAt descending
+        orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return res.json(orders);
+      } catch (authError) {
+        // If token verification fails, fall through to get all orders
+      }
+    }
+    
+    // Get all orders (for public viewing or if not authenticated)
+    const keys = await redisClient.keys('order:*');
     const orders = [];
 
-    for (const orderId of orderIds) {
-      const orderData = await redisClient.get(`order:${orderId}`);
+    for (const key of keys) {
+      const orderData = await redisClient.get(key);
       if (orderData) {
         orders.push(JSON.parse(orderData));
       }
@@ -191,7 +234,7 @@ app.put('/api/orders/:id/status', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+    const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }

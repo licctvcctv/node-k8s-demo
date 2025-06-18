@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品中心 - 云原生商城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: #52c41a;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            color: #52c41a;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .cart-icon {
+            position: relative;
+            cursor: pointer;
+            font-size: 24px;
+        }
+        
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff4d4f;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .hero p {
+            font-size: 20px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .hero-btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        
+        .hero-btn-primary {
+            background: white;
+            color: #52c41a;
+        }
+        
+        .hero-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .hero-btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .hero-btn-secondary:hover {
+            background: white;
+            color: #52c41a;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .section-subtitle {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .feature-desc {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .hot-products {
+            margin-bottom: 60px;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #d9d9d9;
+            position: relative;
+        }
+        
+        .product-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4d4f;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .product-info {
+            padding: 15px;
+        }
+        
+        .product-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .product-desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+        
+        .product-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .product-price {
+            font-size: 20px;
+            color: #ff4d4f;
+            font-weight: 600;
+        }
+        
+        .product-stock {
+            font-size: 14px;
+            color: #52c41a;
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+            color: white;
+            padding: 60px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .cta-title {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+        
+        .cta-desc {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        
+        .cta-btn {
+            padding: 15px 40px;
+            background: white;
+            color: #722ed1;
+            border: none;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 600;
+            color: #52c41a;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .footer {
+            background: #333;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        
+        .footer-links a:hover {
+            opacity: 1;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .view-all-btn {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .view-all-btn a {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #52c41a;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .view-all-btn a:hover {
+            background: #73d13d;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(82, 196, 26, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <nav class="nav">
+                <a href="/" class="logo">
+                    <span>📦</span>
+                    <span>云原生商城</span>
+                </a>
+                <div class="nav-menu">
+                    <a href="/" class="active">首页</a>
+                    <a href="/list.html">商品列表</a>
+                    <a href="/admin.html">商品管理</a>
+                    <a href="/about.html">关于我们</a>
+                </div>
+                <div class="user-info">
+                    <div class="cart-icon" onclick="window.location.href='/cart.html'">
+                        🛒
+                        <span class="cart-count" id="cartCount">0</span>
+                    </div>
+                    <a href="#" onclick="window.location.href='http://'+window.location.hostname+':30081/profile.html'; return false;">个人中心</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+    
+    <section class="hero">
+        <h1>🛍️ 云原生商城</h1>
+        <p>高品质商品，极速配送，安心购物</p>
+        <div class="hero-buttons">
+            <a href="/list.html" class="hero-btn hero-btn-primary">开始购物</a>
+            <a href="/admin.html" class="hero-btn hero-btn-secondary">商品管理</a>
+        </div>
+    </section>
+    
+    <div class="container">
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <div class="feature-title">极速配送</div>
+                <div class="feature-desc">智能物流系统，订单极速处理，商品快速送达</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✨</div>
+                <div class="feature-title">品质保证</div>
+                <div class="feature-desc">严格品控流程，正品保证，让您购物无忧</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💝</div>
+                <div class="feature-title">优质服务</div>
+                <div class="feature-desc">7x24小时客服，随时解答疑问，贴心售后服务</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-title">安全支付</div>
+                <div class="feature-desc">多重加密保护，支付安全有保障，购物更放心</div>
+            </div>
+        </section>
+        
+        <section class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalProducts">0</div>
+                <div class="stat-label">商品总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalCategories">6</div>
+                <div class="stat-label">商品分类</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalUsers">1000+</div>
+                <div class="stat-label">活跃用户</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">99.9%</div>
+                <div class="stat-label">好评率</div>
+            </div>
+        </section>
+        
+        <section class="hot-products">
+            <h2 class="section-title">🔥 热门商品</h2>
+            <p class="section-subtitle">精选优质商品，限时特惠</p>
+            
+            <div id="loading" class="loading">
+                <div>加载中...</div>
+            </div>
+            
+            <div id="productGrid" class="product-grid" style="display: none;">
+                <!-- 商品动态加载 -->
+            </div>
+            
+            <div class="view-all-btn">
+                <a href="/list.html">查看全部商品 →</a>
+            </div>
+        </section>
+        
+        <section class="cta-section">
+            <h2 class="cta-title">🎉 成为商家，开启您的电商之旅</h2>
+            <p class="cta-desc">简单快速的商品管理系统，助您轻松开店</p>
+            <a href="/admin.html" class="cta-btn">立即入驻</a>
+        </section>
+    </div>
+    
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="/about.html">关于我们</a>
+                <a href="/contact.html">联系我们</a>
+                <a href="/terms.html">服务条款</a>
+                <a href="/privacy.html">隐私政策</a>
+            </div>
+            <p>&copy; 2024 云原生商城. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <script>
+        const API_URL = window.location.origin;
+        let products = [];
+        
+        // 页面加载时获取数据
+        window.onload = function() {
+            loadHotProducts();
+            updateCartCount();
+        };
+        
+        // 加载热门商品
+        async function loadHotProducts() {
+            try {
+                const response = await fetch(`${API_URL}/api/products`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    products = data;
+                    displayHotProducts();
+                    updateStats();
+                }
+            } catch (error) {
+                console.error('加载商品失败', error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('productGrid').style.display = 'grid';
+            }
+        }
+        
+        // 显示热门商品（只显示前8个）
+        function displayHotProducts() {
+            const grid = document.getElementById('productGrid');
+            const hotProducts = products.slice(0, 8);
+            
+            grid.innerHTML = hotProducts.map(product => `
+                <div class="product-card" onclick="window.location.href='/detail.html?id=${product.id}'">
+                    <div class="product-image">
+                        ${product.stock < 10 ? '<span class="product-badge">热卖</span>' : ''}
+                        ${getProductIcon(product.name)}
+                    </div>
+                    <div class="product-info">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-desc">${product.description || '优质商品'}</div>
+                        <div class="product-footer">
+                            <div class="product-price">¥${product.price}</div>
+                            <div class="product-stock">库存: ${product.stock}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 更新统计数据
+        function updateStats() {
+            document.getElementById('totalProducts').textContent = products.length;
+        }
+        
+        // 更新购物车数量
+        function updateCartCount() {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
+        
+        // 获取商品图标
+        function getProductIcon(name) {
+            const icons = {
+                '手机': '📱',
+                '电脑': '💻',
+                '耳机': '🎧',
+                '相机': '📷',
+                '手表': '⌚',
+                '图书': '📚',
+                '衣服': '👔',
+                '鞋子': '👟',
+                '食品': '🍔',
+                '饮料': '🥤',
+                '家具': '🪑',
+                '玩具': '🧸'
+            };
+            
+            for (const [key, icon] of Object.entries(icons)) {
+                if (name.includes(key)) {
+                    return icon;
+                }
+            }
+            
+            return '📦';
+        }
+    </script>
+</body>
+</html>
