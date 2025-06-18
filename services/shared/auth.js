@@ -133,7 +133,7 @@ const AUTH = {
                                 style="margin-right: 10px; padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
                             订单中心
                         </button>
-                        <button onclick="window.location.href='http://${window.location.hostname}:30084'" 
+                        <button onclick="AUTH.redirectWithToken('http://${window.location.hostname}:30084')" 
                                 style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
                             系统监控
                         </button>

@@ -47,15 +47,15 @@ app.get('/health', (req, res) => {
 // JWT verification middleware
 async function verifyToken(req, res, next) {
   try {
-    const token = req.headers['authorization'];
+    const authHeader = req.headers['authorization'];
     
-    if (!token) {
+    if (!authHeader) {
       return res.status(401).json({ error: 'No token provided' });
     }
 
     // Verify token with user service
     const response = await axios.get(`${USER_SERVICE_URL}/api/verify`, {
-      headers: { 'Authorization': token }
+      headers: { 'Authorization': authHeader }  // 直接传递完整的 "Bearer token" 格式
     });
 
     req.user = response.data.user;

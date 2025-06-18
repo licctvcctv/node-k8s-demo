@@ -578,7 +578,9 @@
         // 加载订单列表
         async function loadOrders() {
             try {
-                const response = await fetch(`${API_URL}/api/orders`);
+                const response = await fetch(`${API_URL}/api/orders`, {
+                    headers: AUTH.getAuthHeaders()
+                });
                 const data = await response.json();
                 
                 if (response.ok) {
