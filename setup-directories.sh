@@ -51,13 +51,36 @@ for service in user-service product-service order-service; do
 done
 
 # 检查K8s配置文件
-for file in redis.yaml user-service.yaml product-service.yaml order-service.yaml; do
-    if [ ! -f "k8s/$file" ]; then
-        echo "⚠️  缺少: k8s/$file"
-    else
-        echo "✅ k8s/$file"
-    fi
-done
+echo "📁 检查K8s配置文件..."
+if [ ! -f "k8s/namespace.yaml" ]; then
+    echo "⚠️  缺少: k8s/namespace.yaml"
+else
+    echo "✅ k8s/namespace.yaml"
+fi
+
+if [ ! -f "k8s/redis/redis-deployment.yaml" ]; then
+    echo "⚠️  缺少: k8s/redis/redis-deployment.yaml"
+else
+    echo "✅ k8s/redis/redis-deployment.yaml"
+fi
+
+if [ ! -f "k8s/user-service/deployment.yaml" ]; then
+    echo "⚠️  缺少: k8s/user-service/deployment.yaml"
+else
+    echo "✅ k8s/user-service/deployment.yaml"
+fi
+
+if [ ! -f "k8s/product-service/deployment.yaml" ]; then
+    echo "⚠️  缺少: k8s/product-service/deployment.yaml"
+else
+    echo "✅ k8s/product-service/deployment.yaml"
+fi
+
+if [ ! -f "k8s/order-service/deployment.yaml" ]; then
+    echo "⚠️  缺少: k8s/order-service/deployment.yaml"
+else
+    echo "✅ k8s/order-service/deployment.yaml"
+fi
 
 # 检查前端页面
 echo ""

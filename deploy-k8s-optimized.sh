@@ -184,11 +184,13 @@ done
 # 创建命名空间
 echo ""
 echo "6️⃣  创建Kubernetes资源..."
-kubectl create namespace $NAMESPACE 2>/dev/null || show_warning "命名空间已存在"
+echo "创建命名空间..."
+kubectl apply -f k8s/namespace.yaml
+show_progress "命名空间创建完成"
 
 # 部署Redis
 echo "部署Redis..."
-kubectl apply -f k8s/redis.yaml -n $NAMESPACE
+kubectl apply -f k8s/redis/redis-deployment.yaml
 show_progress "Redis部署完成"
 
 # 等待Redis就绪
@@ -200,7 +202,7 @@ echo ""
 echo "7️⃣  部署微服务..."
 for service in user-service product-service order-service; do
     echo "部署 $service..."
-    kubectl apply -f k8s/$service.yaml -n $NAMESPACE
+    kubectl apply -f k8s/$service/deployment.yaml
     show_progress "$service 部署完成"
 done
 
