@@ -235,7 +235,7 @@ deploy_service_with_code() {
     
     # 复制服务文件
     if [ -d "$PROJECT_DIR/services/$service_name" ]; then
-        cp -rL "$PROJECT_DIR/services/$service_name"/* "$temp_dir/" 2>/dev/null || true
+        cp -r "$PROJECT_DIR/services/$service_name"/* "$temp_dir/" 2>/dev/null || true
         
         # 确保有基础的package.json
         if [ ! -f "$temp_dir/package.json" ]; then
@@ -300,17 +300,13 @@ INDEXEOF
         show_warning "$service_name 服务目录不存在"
     fi
     
-    # 创建ConfigMap - 修复：使用tar打包确保包含所有子目录
-    cd "$temp_dir"
-    tar -czf /tmp/${service_name}-app.tar.gz .
+    # 创建包含所有文件的ConfigMap
     kubectl create configmap $service_name-app \
-        --from-file=app.tar.gz=/tmp/${service_name}-app.tar.gz \
+        --from-file="$temp_dir" \
         -n $NAMESPACE \
         --dry-run=client -o yaml | kubectl apply -f - || {
         show_error "创建 $service_name ConfigMap 失败"
     }
-    rm -f /tmp/${service_name}-app.tar.gz
-    cd - > /dev/null
     
     # 清理临时目录
     rm -rf "$temp_dir"
@@ -341,14 +337,8 @@ spec:
             set -e
             echo "Starting setup for $service_name..."
             
-            # 解压应用代码
-            if [ -f /app-config/app.tar.gz ]; then
-                echo "解压应用代码..."
-                tar -xzf /app-config/app.tar.gz -C /app/
-            else
-                echo "错误：找不到app.tar.gz文件"
-                exit 1
-            fi
+            # 复制应用代码
+            cp -r /app-config/* /app/ 2>/dev/null || true
             
             # 创建shared目录并复制auth.js
             mkdir -p /app/shared
@@ -392,7 +382,7 @@ spec:
       - name: $service_name
         image: node:18-alpine
         workingDir: /app
-        command: ["node", "index.js"]
+        command: ["npm", "start"]
         ports:
         - containerPort: $container_port
         env:
