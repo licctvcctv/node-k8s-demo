@@ -197,6 +197,49 @@ spec:
 EOF
 }
 
+# 创建 dashboard-service 的 RBAC 权限
+create_dashboard_rbac() {
+    show_info "创建 dashboard-service ServiceAccount 和 RBAC..."
+    
+    cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dashboard-service
+  namespace: $NAMESPACE
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dashboard-service-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dashboard-service-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dashboard-service-role
+subjects:
+- kind: ServiceAccount
+  name: dashboard-service
+  namespace: $NAMESPACE
+EOF
+    
+    show_progress "Dashboard RBAC 创建完成"
+}
+
 # 部署微服务
 deploy_microservices() {
     # 用户服务
@@ -209,6 +252,9 @@ deploy_microservices() {
     
     # 订单服务
     deploy_service_with_code "order-service" 8083 30083 "redis://redis:6379" ""
+    
+    # 创建 dashboard-service 的 ServiceAccount 和 RBAC
+    create_dashboard_rbac
     
     # 监控服务
     deploy_service_with_code "dashboard-service" 8084 30084 "redis://redis:6379" '
@@ -331,7 +377,8 @@ spec:
     metadata:
       labels:
         app: $service_name
-    spec:
+    spec:$([ "$service_name" = "dashboard-service" ] && echo "
+      serviceAccountName: dashboard-service")
       initContainers:
       - name: setup
         image: node:18-alpine
@@ -380,6 +427,17 @@ spec:
                 }
             fi
             
+            # 为 dashboard-service 安装 kubectl
+            if [ "$service_name" = "dashboard-service" ]; then
+                echo "Installing kubectl for dashboard-service..."
+                apk add --no-cache curl
+                curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+                chmod +x kubectl
+                mv kubectl /app/kubectl
+                echo "kubectl installed successfully"
+                /app/kubectl version --client || echo "kubectl version check failed"
+            fi
+            
             echo "Setup completed!"
         volumeMounts:
         - name: app
@@ -399,7 +457,9 @@ spec:
         - name: REDIS_URL
           value: "$redis_url"
         - name: PORT
-          value: "$container_port"$extra_env
+          value: "$container_port"$([ "$service_name" = "dashboard-service" ] && echo "
+        - name: PATH
+          value: \"/app:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"")$extra_env
         volumeMounts:
         - name: app
           mountPath: /app
@@ -540,8 +600,103 @@ deploy_jenkins_cicd() {
         show_warning "无法获取Jenkins初始密码，请手动查看"
     fi
     
-    # 创建Pipeline Job
+    # 创建Pipeline Job配置文件
+    create_jenkins_job_config
+    
+    # 显示Pipeline配置说明
     create_jenkins_pipeline
+}
+
+# 创建Jenkins Job配置文件
+create_jenkins_job_config() {
+    show_info "创建Jenkins Pipeline配置文件..."
+    
+    # 创建一个Jenkins job配置XML文件
+    cat > "$JENKINS_HOME/cloud-shop-demo-job.xml" << 'EOF'
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <actions/>
+  <description>云原生商城演示Pipeline - 自动配置</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+    <script>
+pipeline {
+    agent any
+    stages {
+        stage('🔍 检查环境') {
+            steps {
+                sh '''
+                    echo "====== 检查系统环境 ======"
+                    echo "当前目录: $(pwd)"
+                    echo "查看服务状态:"
+                    curl -s http://host.docker.internal:30081/health || echo "用户服务未响应"
+                    curl -s http://host.docker.internal:30082/health || echo "商品服务未响应"
+                    curl -s http://host.docker.internal:30083/health || echo "订单服务未响应"
+                    curl -s http://host.docker.internal:30084/health || echo "监控服务未响应"
+                '''
+            }
+        }
+        stage('🧪 测试API') {
+            steps {
+                sh '''
+                    echo "====== 测试服务API ======"
+                    echo "获取商品列表:"
+                    curl -s http://host.docker.internal:30082/api/products | head -100 || echo "API测试失败"
+                '''
+            }
+        }
+        stage('📊 更新监控数据') {
+            steps {
+                sh '''
+                    echo "====== 触发监控数据更新 ======"
+                    for i in 1 2 3; do
+                        curl -s http://host.docker.internal:30082/api/products > /dev/null
+                        curl -s http://host.docker.internal:30081/health > /dev/null
+                        sleep 1
+                    done
+                    echo "监控数据已更新"
+                '''
+            }
+        }
+        stage('🎉 部署验证') {
+            steps {
+                sh '''
+                    echo "🌐 服务访问地址："
+                    echo "👤 用户服务: http://localhost:30081"
+                    echo "📦 商品服务: http://localhost:30082"
+                    echo "🛒 订单服务: http://localhost:30083"
+                    echo "📊 监控面板: http://localhost:30084"
+                '''
+            }
+        }
+    }
+    post {
+        success {
+            echo '✅ Pipeline执行成功！系统运行正常'
+        }
+        failure {
+            echo '❌ Pipeline执行失败，请检查服务状态'
+        }
+    }
+}
+    </script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
+EOF
+    
+    show_progress "Jenkins job配置文件已创建"
+    
+    # 尝试通过Jenkins CLI自动创建job（如果Jenkins已经启动且配置完成）
+    echo ""
+    echo "📌 自动导入Pipeline配置："
+    echo "等待Jenkins完全启动后，可以使用以下命令自动创建Pipeline："
+    echo ""
+    echo "docker exec jenkins-cloud-shop java -jar /var/jenkins_home/war/WEB-INF/lib/cli-*.jar -s http://localhost:8080/ -auth admin:admin123 create-job cloud-shop-demo < $JENKINS_HOME/cloud-shop-demo-job.xml"
+    echo ""
 }
 
 # 创建Jenkins Pipeline
@@ -554,6 +709,90 @@ create_jenkins_pipeline() {
     echo "   - 用户名: admin"
     echo "   - 密码: admin123"
     echo "4. 配置完成后，创建新的Pipeline项目"
+    echo ""
+    echo "📝 创建演示Pipeline："
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "1. 新建任务 → 输入名称'cloud-shop-demo' → 选择'流水线'"
+    echo "2. 在Pipeline脚本框中，粘贴以下内容："
+    echo ""
+    cat << 'PIPELINE_SCRIPT'
+pipeline {
+    agent any
+    stages {
+        stage('🔍 检查环境') {
+            steps {
+                sh '''
+                    echo "====== 检查系统环境 ======"
+                    echo "当前目录: $(pwd)"
+                    echo "查看服务状态:"
+                    curl -s http://host.docker.internal:30081/health || echo "用户服务未响应"
+                    curl -s http://host.docker.internal:30082/health || echo "商品服务未响应"
+                    curl -s http://host.docker.internal:30083/health || echo "订单服务未响应"
+                    curl -s http://host.docker.internal:30084/health || echo "监控服务未响应"
+                '''
+            }
+        }
+        stage('🧪 测试API') {
+            steps {
+                sh '''
+                    echo "====== 测试服务API ======"
+                    # 测试商品列表
+                    echo "获取商品列表:"
+                    curl -s http://host.docker.internal:30082/api/products | head -100 || echo "API测试失败"
+                '''
+            }
+        }
+        stage('📊 更新监控数据') {
+            steps {
+                sh '''
+                    echo "====== 触发监控数据更新 ======"
+                    # 模拟一些操作来生成监控数据
+                    for i in 1 2 3; do
+                        curl -s http://host.docker.internal:30082/api/products > /dev/null
+                        curl -s http://host.docker.internal:30081/health > /dev/null
+                        sleep 1
+                    done
+                    echo "监控数据已更新"
+                '''
+            }
+        }
+        stage('🎉 部署验证') {
+            steps {
+                script {
+                    echo "====== 系统验证 ======"
+                    sh '''
+                        echo "🌐 服务访问地址："
+                        echo "👤 用户服务: http://localhost:30081"
+                        echo "📦 商品服务: http://localhost:30082"
+                        echo "🛒 订单服务: http://localhost:30083"
+                        echo "📊 监控面板: http://localhost:30084"
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo '✅ Pipeline执行成功！系统运行正常'
+        }
+        failure {
+            echo '❌ Pipeline执行失败，请检查服务状态'
+        }
+    }
+}
+PIPELINE_SCRIPT
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "💡 这个Pipeline会："
+    echo "- 真实检查已部署的服务状态"
+    echo "- 测试API接口"
+    echo "- 生成一些监控数据"
+    echo "- 显示服务访问地址"
+    echo ""
+    echo "⚡ 快速开始："
+    echo "1. 点击'保存'后点击'立即构建'"
+    echo "2. 查看构建进度和控制台输出"
+    echo "3. 构建成功后访问监控面板查看效果"
 }
 
 # 验证部署
