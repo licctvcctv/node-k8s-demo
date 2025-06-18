@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const redis = require('redis');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -10,11 +11,26 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 8084;
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // Service URLs
 const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:8081';
 const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://product-service:8082';
 const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL || 'http://order-service:8083';
+
+// Redis client
+let redisClient;
+
+async function connectRedis() {
+  try {
+    redisClient = redis.createClient({ url: REDIS_URL });
+    redisClient.on('error', err => console.error('Redis Client Error', err));
+    await redisClient.connect();
+    console.log('Connected to Redis');
+  } catch (error) {
+    console.error('Failed to connect to Redis:', error);
+  }
+}
 
 // Middleware
 app.use(helmet({
@@ -37,36 +53,54 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'dashboard-service' });
 });
 
-// Get service health status
+// Get service health status - 真实健康检查
 app.get('/api/health-check', async (req, res) => {
   const services = [
-    { name: 'User Service', url: USER_SERVICE_URL + '/health', port: '30081' },
-    { name: 'Product Service', url: PRODUCT_SERVICE_URL + '/health', port: '30082' },
-    { name: 'Order Service', url: ORDER_SERVICE_URL + '/health', port: '30083' }
+    { name: '用户服务', url: USER_SERVICE_URL + '/health', port: '30081' },
+    { name: '商品服务', url: PRODUCT_SERVICE_URL + '/health', port: '30082' },
+    { name: '订单服务', url: ORDER_SERVICE_URL + '/health', port: '30083' }
   ];
   
   const results = [];
   
-  for (const service of services) {
+  // 并行检查所有服务
+  const checks = services.map(async (service) => {
     try {
-      const response = await axios.get(service.url, { timeout: 3000 });
-      results.push({
-        name: service.name,
-        status: 'healthy',
-        port: service.port,
-        response: response.data
+      const startTime = Date.now();
+      const response = await axios.get(service.url, { 
+        timeout: 5000,
+        validateStatus: (status) => status < 500 // 允许4xx状态码
       });
+      const responseTime = Date.now() - startTime;
+      
+      return {
+        name: service.name,
+        status: response.status === 200 ? 'healthy' : 'unhealthy',
+        port: service.port,
+        responseTime: responseTime + 'ms',
+        lastCheck: new Date().toISOString(),
+        details: response.data
+      };
     } catch (error) {
-      results.push({
+      return {
         name: service.name,
         status: 'unhealthy',
         port: service.port,
-        error: error.message
-      });
+        responseTime: 'timeout',
+        lastCheck: new Date().toISOString(),
+        error: error.code === 'ECONNREFUSED' ? '服务不可达' : 
+               error.code === 'ECONNABORTED' ? '请求超时' : 
+               error.message
+      };
     }
-  }
+  });
   
-  res.json(results);
+  try {
+    const results = await Promise.all(checks);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Health check failed', message: error.message });
+  }
 });
 
 // Get Kubernetes cluster info
@@ -118,7 +152,7 @@ app.get('/api/k8s-info', async (req, res) => {
   }
 });
 
-// Get service statistics
+// Get service statistics - 真实数据
 app.get('/api/statistics', async (req, res) => {
   try {
     const stats = {
@@ -128,14 +162,53 @@ app.get('/api/statistics', async (req, res) => {
       revenue: 0
     };
     
-    // Mock statistics (in real scenario, these would query the actual services)
-    stats.users = 3; // Default users
-    stats.products = 8; // Default products
-    stats.orders = 4; // Default orders
-    stats.revenue = 16352; // Sum of default orders
+    if (!redisClient) {
+      return res.status(500).json({ error: 'Redis not connected' });
+    }
+    
+    // 真实获取用户数 - 扫描 user:* keys
+    try {
+      const userKeys = await redisClient.keys('user:*');
+      stats.users = userKeys.length;
+    } catch (err) {
+      console.error('Error getting users count:', err);
+    }
+    
+    // 真实获取商品数 - 扫描 product:* keys
+    try {
+      const productKeys = await redisClient.keys('product:*');
+      stats.products = productKeys.length;
+    } catch (err) {
+      console.error('Error getting products count:', err);
+    }
+    
+    // 真实获取订单数和总销售额 - 扫描 order:* keys
+    try {
+      const orderKeys = await redisClient.keys('order:*');
+      stats.orders = orderKeys.length;
+      
+      let totalRevenue = 0;
+      for (const key of orderKeys) {
+        try {
+          const orderData = await redisClient.get(key);
+          if (orderData) {
+            const order = JSON.parse(orderData);
+            if (order.totalAmount && order.status !== 'cancelled') {
+              totalRevenue += parseFloat(order.totalAmount);
+            }
+          }
+        } catch (orderErr) {
+          console.error('Error parsing order:', orderErr);
+        }
+      }
+      stats.revenue = Math.round(totalRevenue * 100) / 100; // 保留2位小数
+    } catch (err) {
+      console.error('Error getting orders count:', err);
+    }
     
     res.json(stats);
   } catch (error) {
+    console.error('Statistics error:', error);
     res.status(500).json({ error: 'Failed to get statistics' });
   }
 });
@@ -162,6 +235,17 @@ app.get('/api/metrics', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Dashboard service running on port ${PORT}`);
-});
+async function start() {
+  try {
+    await connectRedis();
+    app.listen(PORT, () => {
+      console.log(`Dashboard service running on port ${PORT}`);
+      console.log('Connected to Redis for real statistics');
+    });
+  } catch (error) {
+    console.error('Failed to start dashboard service:', error);
+    process.exit(1);
+  }
+}
+
+start();

@@ -532,6 +532,9 @@
             loadOrders();
             loadProducts();
             
+            // 检查是否是直接购买
+            checkDirectBuy();
+            
             if (!AUTH.getToken()) {
                 document.getElementById('authNotice').style.display = 'block';
             }
@@ -857,6 +860,64 @@
             if (event.target === modal) {
                 closeModal();
             }
+        }
+        
+        // 检查直接购买
+        function checkDirectBuy() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const directBuy = urlParams.get('directBuy');
+            
+            if (directBuy === '1') {
+                const productId = urlParams.get('productId');
+                const productName = urlParams.get('productName');
+                const productPrice = parseFloat(urlParams.get('productPrice'));
+                const quantity = parseInt(urlParams.get('quantity')) || 1;
+                
+                if (productId && productName && productPrice) {
+                    // 检查登录状态
+                    if (!AUTH.getToken()) {
+                        showMessage('请先登录再购买', 'error');
+                        setTimeout(() => {
+                            sessionStorage.setItem('redirect_after_login', window.location.href);
+                            AUTH.redirectWithToken('http://' + window.location.hostname + ':30081/login.html');
+                        }, 1500);
+                        return;
+                    }
+                    
+                    // 自动打开创建订单模态框
+                    setTimeout(() => {
+                        showDirectBuyModal(productId, productName, productPrice, quantity);
+                    }, 1000);
+                    
+                    // 清理URL参数
+                    const newUrl = window.location.pathname;
+                    window.history.replaceState({}, '', newUrl);
+                }
+            }
+        }
+        
+        // 显示直接购买模态框
+        function showDirectBuyModal(productId, productName, productPrice, quantity) {
+            if (!AUTH.checkAuth()) {
+                return;
+            }
+            
+            document.getElementById('modalTitle').textContent = '立即购买';
+            document.getElementById('orderForm').reset();
+            document.getElementById('orderId').value = '';
+            document.getElementById('orderItems').innerHTML = `
+                <div class="order-item-input">
+                    <select class="product-select" required onchange="updateItemPrice(this)" disabled>
+                        <option value="${productId}" data-price="${productPrice}" selected>${productName} - ¥${productPrice}</option>
+                    </select>
+                    <input type="number" placeholder="数量" min="1" value="${quantity}" required onchange="calculateTotal()">
+                    <input type="number" placeholder="单价" step="0.01" value="${productPrice}" readonly>
+                    <span style="color: #999; font-size: 12px;">直接购买</span>
+                </div>
+            `;
+            
+            calculateTotal();
+            document.getElementById('orderModal').style.display = 'flex';
         }
         
         // 定时刷新订单列表

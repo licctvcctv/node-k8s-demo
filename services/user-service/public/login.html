@@ -385,11 +385,17 @@
                     
                     showMessage('登录成功！正在跳转...', 'success');
                     
-                    // 跳转到个人中心或之前保存的页面
+                    // 跳转到商城首页或之前保存的页面
                     setTimeout(() => {
-                        const redirectUrl = sessionStorage.getItem('redirect_after_login') || '/profile.html';
+                        const redirectUrl = sessionStorage.getItem('redirect_after_login');
                         sessionStorage.removeItem('redirect_after_login');
-                        window.location.href = redirectUrl;
+                        
+                        if (redirectUrl) {
+                            window.location.href = redirectUrl;
+                        } else {
+                            // 默认跳转到商品首页
+                            AUTH.redirectWithToken('http://' + window.location.hostname + ':30082');
+                        }
                     }, 1000);
                 } else {
                     showMessage(data.error || '登录失败，请检查用户名和密码', 'error');

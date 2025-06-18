@@ -296,6 +296,49 @@
             color: #52c41a;
         }
         
+        .product-actions {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #52c41a;
+            color: white;
+            flex: 1;
+        }
+        
+        .btn-primary:hover {
+            background: #73d13d;
+        }
+        
+        .btn-outline {
+            background: white;
+            color: #52c41a;
+            border: 1px solid #52c41a;
+            flex: 1;
+        }
+        
+        .btn-outline:hover {
+            background: #52c41a;
+            color: white;
+        }
+        
         .cta-section {
             background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
             color: white;
@@ -574,18 +617,22 @@
             const hotProducts = products.slice(0, 8);
             
             grid.innerHTML = hotProducts.map(product => `
-                <div class="product-card" onclick="window.location.href='/detail.html?id=${product.id}'">
-                    <div class="product-image">
+                <div class="product-card">
+                    <div class="product-image" onclick="window.location.href='/detail.html?id=${product.id}'">
                         ${product.stock < 10 ? '<span class="product-badge">热卖</span>' : ''}
                         ${getProductIcon(product.name)}
                     </div>
-                    <div class="product-info">
+                    <div class="product-info" onclick="window.location.href='/detail.html?id=${product.id}'">
                         <div class="product-name">${product.name}</div>
                         <div class="product-desc">${product.description || '优质商品'}</div>
                         <div class="product-footer">
                             <div class="product-price">¥${product.price}</div>
                             <div class="product-stock">库存: ${product.stock}</div>
                         </div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="btn btn-outline" onclick="addToCart('${product.id}', '${product.name}', ${product.price}, event)">加入购物车</button>
+                        <button class="btn btn-primary" onclick="buyNow('${product.id}', '${product.name}', ${product.price}, event)">立即购买</button>
                     </div>
                 </div>
             `).join('');
@@ -606,18 +653,18 @@
         // 获取商品图标
         function getProductIcon(name) {
             const icons = {
-                '手机': '📱',
-                '电脑': '💻',
-                '耳机': '🎧',
+                'iPhone': '📱',
+                'MacBook': '💻',
+                'AirPods': '🎧',
                 '相机': '📷',
                 '手表': '⌚',
                 '图书': '📚',
+                '架构': '📚',
+                'Kubernetes': '📚',
                 '衣服': '👔',
-                '鞋子': '👟',
-                '食品': '🍔',
-                '饮料': '🥤',
-                '家具': '🪑',
-                '玩具': '🧸'
+                'T恤': '👔',
+                '键盘': '⌨️',
+                '椅子': '🪑'
             };
             
             for (const [key, icon] of Object.entries(icons)) {
@@ -627,6 +674,97 @@
             }
             
             return '📦';
+        }
+        
+        // 添加到购物车
+        function addToCart(productId, productName, productPrice, event) {
+            event.stopPropagation(); // 阻止事件冒泡
+            
+            try {
+                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                
+                // 检查商品是否已在购物车中
+                const existingItem = cart.find(item => item.id === productId);
+                
+                if (existingItem) {
+                    existingItem.quantity += 1;
+                } else {
+                    cart.push({
+                        id: productId,
+                        name: productName,
+                        price: productPrice,
+                        quantity: 1
+                    });
+                }
+                
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateCartCount();
+                
+                // 显示成功消息
+                showMessage('商品已添加到购物车', 'success');
+                
+            } catch (error) {
+                console.error('添加到购物车失败:', error);
+                showMessage('添加失败，请重试', 'error');
+            }
+        }
+        
+        // 立即购买
+        function buyNow(productId, productName, productPrice, event) {
+            event.stopPropagation(); // 阻止事件冒泡
+            
+            if (!AUTH.getToken()) {
+                showMessage('请先登录', 'error');
+                setTimeout(() => {
+                    AUTH.redirectWithToken('http://' + window.location.hostname + ':30081/login.html');
+                }, 1500);
+                return;
+            }
+            
+            // 直接跳转到创建订单，使用URL参数传递商品信息
+            const orderUrl = `http://${window.location.hostname}:30083?directBuy=1&productId=${productId}&productName=${encodeURIComponent(productName)}&productPrice=${productPrice}&quantity=1`;
+            AUTH.redirectWithToken(orderUrl);
+        }
+        
+        // 显示消息
+        function showMessage(text, type) {
+            // 创建消息元素
+            const message = document.createElement('div');
+            message.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 4px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                ${type === 'success' ? 'background: #52c41a;' : 'background: #ff4d4f;'}
+            `;
+            message.textContent = text;
+            
+            // 添加动画样式
+            if (!document.getElementById('messageStyle')) {
+                const style = document.createElement('style');
+                style.id = 'messageStyle';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(message);
+            
+            // 3秒后移除
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.parentNode.removeChild(message);
+                }
+            }, 3000);
         }
     </script>
 </body>
