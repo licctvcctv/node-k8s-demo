@@ -334,10 +334,8 @@
         
         // 页面初始化
         window.onload = function() {
-            // 初始化认证（需要登录）
-            if (!AUTH.initPage(true)) {
-                return;
-            }
+            // 初始化认证（Demo项目，不强制登录）
+            AUTH.initPage(false);
             
             loadCart();
         };
@@ -481,11 +479,12 @@
                 return;
             }
             
-            if (!AUTH.getToken()) {
-                showMessage('请先登录', 'error');
-                AUTH.redirectWithToken('http://' + window.location.hostname + ':30081/login.html');
-                return;
-            }
+            // Demo项目，不检查登录
+            // if (!AUTH.getToken()) {
+            //     showMessage('请先登录', 'error');
+            //     AUTH.redirectWithToken('http://' + window.location.hostname + ':30081/login.html');
+            //     return;
+            // }
             
             // 跳转到结算页面
             window.location.href = '/checkout.html';

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单管理 - 云原生商城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: #722ed1;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .filter-group input,
+        .filter-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .order-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tr:hover {
+            background: #fafafa;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .status-pending {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+        
+        .status-paid {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .status-shipped {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        
+        .status-delivered {
+            background: #f0f5ff;
+            color: #2f54eb;
+        }
+        
+        .status-cancelled {
+            background: #fff1f0;
+            color: #f5222d;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 5px;
+        }
+        
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #52c41a;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .order-detail {
+            margin-bottom: 20px;
+        }
+        
+        .order-detail h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .order-items {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .close-btn {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div id="nav-container"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1 class="page-title">📋 订单管理</h1>
+            <p>查看和管理所有订单信息</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalOrders">0</div>
+                <div class="stat-label">订单总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalRevenue">¥0</div>
+                <div class="stat-label">总销售额</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingOrders">0</div>
+                <div class="stat-label">待处理订单</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completedOrders">0</div>
+                <div class="stat-label">已完成订单</div>
+            </div>
+        </div>
+        
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>订单状态</label>
+                <select id="statusFilter" onchange="filterOrders()">
+                    <option value="">全部</option>
+                    <option value="pending">待支付</option>
+                    <option value="paid">已支付</option>
+                    <option value="shipped">已发货</option>
+                    <option value="delivered">已送达</option>
+                    <option value="cancelled">已取消</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>用户筛选</label>
+                <input type="text" id="userFilter" placeholder="输入用户名..." onkeyup="filterOrders()">
+            </div>
+            <div class="filter-group">
+                <label>排序方式</label>
+                <select id="sortOrder" onchange="filterOrders()">
+                    <option value="newest">最新优先</option>
+                    <option value="oldest">最早优先</option>
+                    <option value="amount-high">金额从高到低</option>
+                    <option value="amount-low">金额从低到高</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="order-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>用户</th>
+                        <th>商品数量</th>
+                        <th>总金额</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="orderTableBody">
+                    <!-- 订单数据将在这里动态加载 -->
+                </tbody>
+            </table>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <p>暂无订单数据</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 订单详情模态框 -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2>订单详情</h2>
+            <div id="orderDetail"></div>
+        </div>
+    </div>
+    
+    <script src="/auth.js"></script>
+    <script>
+        const ORDER_SERVICE_URL = 'http://' + window.location.hostname + ':30083';
+        let orders = [];
+        
+        window.onload = function() {
+            AUTH.initPage(false);
+            loadOrders();
+        };
+        
+        async function loadOrders() {
+            try {
+                const response = await fetch(`${ORDER_SERVICE_URL}/api/orders`, {
+                    headers: AUTH.getAuthHeaders()
+                });
+                orders = await response.json();
+                updateStats();
+                filterOrders();
+            } catch (error) {
+                console.error('加载订单失败:', error);
+            }
+        }
+        
+        function updateStats() {
+            const totalOrders = orders.length;
+            const totalRevenue = orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? o.totalAmount : 0), 0);
+            const pendingOrders = orders.filter(o => o.status === 'pending').length;
+            const completedOrders = orders.filter(o => o.status === 'delivered').length;
+            
+            document.getElementById('totalOrders').textContent = totalOrders;
+            document.getElementById('totalRevenue').textContent = `¥${totalRevenue.toFixed(2)}`;
+            document.getElementById('pendingOrders').textContent = pendingOrders;
+            document.getElementById('completedOrders').textContent = completedOrders;
+        }
+        
+        function filterOrders() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const userFilter = document.getElementById('userFilter').value.toLowerCase();
+            const sortOrder = document.getElementById('sortOrder').value;
+            
+            let filtered = orders.filter(order => {
+                if (statusFilter && order.status !== statusFilter) return false;
+                if (userFilter && !order.userId.toLowerCase().includes(userFilter)) return false;
+                return true;
+            });
+            
+            // 排序
+            filtered.sort((a, b) => {
+                switch (sortOrder) {
+                    case 'oldest':
+                        return new Date(a.createdAt) - new Date(b.createdAt);
+                    case 'amount-high':
+                        return b.totalAmount - a.totalAmount;
+                    case 'amount-low':
+                        return a.totalAmount - b.totalAmount;
+                    default: // newest
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                }
+            });
+            
+            displayOrders(filtered);
+        }
+        
+        function displayOrders(ordersToShow) {
+            const tbody = document.getElementById('orderTableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (ordersToShow.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            tbody.innerHTML = ordersToShow.map(order => `
+                <tr>
+                    <td>${order.id.substring(0, 8)}...</td>
+                    <td>${order.userId}</td>
+                    <td>${order.items.length} 件</td>
+                    <td style="color: #f5222d; font-weight: 600;">¥${order.totalAmount.toFixed(2)}</td>
+                    <td><span class="status-badge status-${order.status}">${getStatusText(order.status)}</span></td>
+                    <td>${new Date(order.createdAt).toLocaleString('zh-CN')}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewOrder('${order.id}')">查看</button>
+                        ${order.status === 'pending' ? `
+                            <button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'paid')">确认付款</button>
+                        ` : ''}
+                        ${order.status === 'paid' ? `
+                            <button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'shipped')">发货</button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待支付',
+                'paid': '已支付',
+                'shipped': '已发货',
+                'delivered': '已送达',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function viewOrder(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            const detailHtml = `
+                <div class="order-detail">
+                    <h3>订单信息</h3>
+                    <p><strong>订单号：</strong>${order.id}</p>
+                    <p><strong>用户：</strong>${order.userId}</p>
+                    <p><strong>状态：</strong><span class="status-badge status-${order.status}">${getStatusText(order.status)}</span></p>
+                    <p><strong>创建时间：</strong>${new Date(order.createdAt).toLocaleString('zh-CN')}</p>
+                    ${order.updatedAt ? `<p><strong>更新时间：</strong>${new Date(order.updatedAt).toLocaleString('zh-CN')}</p>` : ''}
+                </div>
+                
+                <div class="order-detail">
+                    <h3>商品清单</h3>
+                    <div class="order-items">
+                        ${order.items.map(item => `
+                            <div style="margin-bottom: 10px;">
+                                <strong>${item.productName || '商品 ' + item.productId}</strong>
+                                <span style="float: right;">¥${item.price} × ${item.quantity} = ¥${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                        <div style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
+                            <strong>总计：</strong>
+                            <span style="float: right; color: #f5222d; font-size: 18px;">¥${order.totalAmount.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${order.shippingAddress ? `
+                    <div class="order-detail">
+                        <h3>收货信息</h3>
+                        <p>${order.shippingAddress}</p>
+                    </div>
+                ` : ''}
+                
+                ${order.notes ? `
+                    <div class="order-detail">
+                        <h3>备注</h3>
+                        <p>${order.notes}</p>
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('orderDetail').innerHTML = detailHtml;
+            document.getElementById('orderModal').style.display = 'flex';
+        }
+        
+        async function updateOrderStatus(orderId, newStatus) {
+            if (!confirm(`确定要将订单状态更改为"${getStatusText(newStatus)}"吗？`)) return;
+            
+            try {
+                const response = await fetch(`${ORDER_SERVICE_URL}/api/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: AUTH.getAuthHeaders(),
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    loadOrders();
+                }
+            } catch (error) {
+                console.error('更新订单状态失败:', error);
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('orderModal').style.display = 'none';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('orderModal')) {
+                closeModal();
+            }
+        }
+        
+        // 定时刷新
+        setInterval(loadOrders, 30000);
+    </script>
+</body>
+</html>

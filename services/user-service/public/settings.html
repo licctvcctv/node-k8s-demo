@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户设置 - 云原生商城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: #1890ff;
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+        
+        .nav-menu a:hover {
+            opacity: 1;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #1890ff;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 10px 15px;
+            color: #666;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu a:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .sidebar-menu a.active {
+            background: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+        
+        .main-content {
+            flex: 1;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .settings-section {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-info {
+            flex: 1;
+        }
+        
+        .setting-label {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .setting-desc {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #1890ff;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .select-control {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+        
+        .danger-zone {
+            background: #fff2e8;
+            border: 1px solid #ffbb96;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .danger-zone h3 {
+            color: #fa541c;
+            margin-bottom: 10px;
+        }
+        
+        .privacy-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .privacy-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .success {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        
+        .info-text {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="nav-container"></div>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">🛍️ 云原生商城</a>
+            <nav class="nav-menu">
+                <a href="/">首页</a>
+                <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30082'); return false;">商品中心</a>
+                <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30083'); return false;">我的订单</a>
+                <a href="/help.html">帮助中心</a>
+            </nav>
+            <div class="user-menu">
+                <div class="user-avatar" id="headerAvatar">U</div>
+                <span id="headerUsername">用户</span>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="/profile.html">👤 个人信息</a></li>
+                <li><a href="/orders.html">📦 我的订单</a></li>
+                <li><a href="/addresses.html">📍 收货地址</a></li>
+                <li><a href="/favorites.html">❤️ 我的收藏</a></li>
+                <li><a href="/security.html">🔒 账户安全</a></li>
+                <li><a href="/settings.html" class="active">⚙️ 账户设置</a></li>
+            </ul>
+        </aside>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">账户设置</h1>
+            </div>
+            
+            <div id="message"></div>
+            
+            <div class="settings-section">
+                <h2 class="section-title">通知设置</h2>
+                <div class="settings-group">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">订单通知</div>
+                            <div class="setting-desc">订单状态变更时接收通知</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="orderNotification" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">促销活动</div>
+                            <div class="setting-desc">接收优惠券、折扣等促销信息</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="promotionNotification" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">系统通知</div>
+                            <div class="setting-desc">账户安全、系统维护等重要通知</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="systemNotification" checked disabled>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">邮件通知</div>
+                            <div class="setting-desc">通过邮件接收各类通知</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="emailNotification">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h2 class="section-title">偏好设置</h2>
+                <div class="settings-group">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">界面语言</div>
+                            <div class="setting-desc">选择系统显示语言</div>
+                        </div>
+                        <select class="select-control" id="language">
+                            <option value="zh-CN" selected>简体中文</option>
+                            <option value="zh-TW">繁体中文</option>
+                            <option value="en-US">English</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">时区设置</div>
+                            <div class="setting-desc">设置您所在的时区</div>
+                        </div>
+                        <select class="select-control" id="timezone">
+                            <option value="Asia/Shanghai" selected>北京时间 (GMT+8)</option>
+                            <option value="Asia/Tokyo">东京时间 (GMT+9)</option>
+                            <option value="America/New_York">纽约时间 (GMT-5)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">货币单位</div>
+                            <div class="setting-desc">商品价格显示的货币单位</div>
+                        </div>
+                        <select class="select-control" id="currency">
+                            <option value="CNY" selected>人民币 (¥)</option>
+                            <option value="USD">美元 ($)</option>
+                            <option value="EUR">欧元 (€)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h2 class="section-title">隐私设置</h2>
+                <div class="privacy-settings">
+                    <div class="privacy-item">
+                        <div class="setting-info">
+                            <div class="setting-label">个人资料可见性</div>
+                            <div class="setting-desc">其他用户是否可以查看您的个人资料</div>
+                        </div>
+                        <select class="select-control" id="profileVisibility">
+                            <option value="public">公开</option>
+                            <option value="friends">仅好友</option>
+                            <option value="private" selected>仅自己</option>
+                        </select>
+                    </div>
+                    <div class="privacy-item">
+                        <div class="setting-info">
+                            <div class="setting-label">购买记录</div>
+                            <div class="setting-desc">是否在个人主页显示购买记录</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="showPurchaseHistory">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="privacy-item">
+                        <div class="setting-info">
+                            <div class="setting-label">收藏夹</div>
+                            <div class="setting-desc">是否公开显示收藏的商品</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="showFavorites">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h2 class="section-title">数据管理</h2>
+                <div class="settings-group">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">导出个人数据</div>
+                            <div class="setting-desc">下载您在平台上的所有个人数据</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="exportData()">导出数据</button>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">清除浏览记录</div>
+                            <div class="setting-desc">清除您的商品浏览记录</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="clearHistory()">清除记录</button>
+                    </div>
+                </div>
+                
+                <div class="danger-zone">
+                    <h3>危险操作</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-label">注销账户</div>
+                            <div class="setting-desc">永久删除您的账户和所有相关数据，此操作不可恢复</div>
+                        </div>
+                        <button class="btn btn-danger" onclick="deleteAccount()">注销账户</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <button class="btn btn-primary" onclick="saveSettings()">保存所有设置</button>
+                <span class="info-text" style="margin-left: 20px;">上次保存时间：<span id="lastSaveTime">未保存</span></span>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/auth.js"></script>
+    <script>
+        let settings = {};
+        
+        window.onload = function() {
+            if (!AUTH.initPage(true)) {
+                return;
+            }
+            
+            loadUserInfo();
+            loadSettings();
+        };
+        
+        function loadUserInfo() {
+            const user = AUTH.getUser();
+            if (user) {
+                document.getElementById('headerUsername').textContent = user.username;
+                document.getElementById('headerAvatar').textContent = user.username[0].toUpperCase();
+            }
+        }
+        
+        function loadSettings() {
+            // 从localStorage加载设置（实际应该从后端API）
+            const savedSettings = localStorage.getItem('userSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+                
+                // 应用设置到UI
+                if (settings.notifications) {
+                    document.getElementById('orderNotification').checked = settings.notifications.order !== false;
+                    document.getElementById('promotionNotification').checked = settings.notifications.promotion !== false;
+                    document.getElementById('emailNotification').checked = settings.notifications.email === true;
+                }
+                
+                if (settings.preferences) {
+                    document.getElementById('language').value = settings.preferences.language || 'zh-CN';
+                    document.getElementById('timezone').value = settings.preferences.timezone || 'Asia/Shanghai';
+                    document.getElementById('currency').value = settings.preferences.currency || 'CNY';
+                }
+                
+                if (settings.privacy) {
+                    document.getElementById('profileVisibility').value = settings.privacy.profileVisibility || 'private';
+                    document.getElementById('showPurchaseHistory').checked = settings.privacy.showPurchaseHistory === true;
+                    document.getElementById('showFavorites').checked = settings.privacy.showFavorites === true;
+                }
+                
+                if (settings.lastSaveTime) {
+                    document.getElementById('lastSaveTime').textContent = new Date(settings.lastSaveTime).toLocaleString();
+                }
+            }
+        }
+        
+        function saveSettings() {
+            settings = {
+                notifications: {
+                    order: document.getElementById('orderNotification').checked,
+                    promotion: document.getElementById('promotionNotification').checked,
+                    system: true, // 系统通知始终开启
+                    email: document.getElementById('emailNotification').checked
+                },
+                preferences: {
+                    language: document.getElementById('language').value,
+                    timezone: document.getElementById('timezone').value,
+                    currency: document.getElementById('currency').value
+                },
+                privacy: {
+                    profileVisibility: document.getElementById('profileVisibility').value,
+                    showPurchaseHistory: document.getElementById('showPurchaseHistory').checked,
+                    showFavorites: document.getElementById('showFavorites').checked
+                },
+                lastSaveTime: new Date().toISOString()
+            };
+            
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+            document.getElementById('lastSaveTime').textContent = new Date(settings.lastSaveTime).toLocaleString();
+            
+            showMessage('设置保存成功！', 'success');
+        }
+        
+        function exportData() {
+            const userData = {
+                user: AUTH.getUser(),
+                settings: settings,
+                exportTime: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(userData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `user-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showMessage('数据导出成功！', 'success');
+        }
+        
+        function clearHistory() {
+            if (!confirm('确定要清除所有浏览记录吗？')) return;
+            
+            // 实际应该调用API清除
+            localStorage.removeItem('browsingHistory');
+            showMessage('浏览记录已清除', 'success');
+        }
+        
+        function deleteAccount() {
+            if (!confirm('确定要注销账户吗？此操作不可恢复！')) return;
+            if (!confirm('请再次确认：您真的要永久删除账户吗？')) return;
+            
+            // 实际应该调用API删除账户
+            alert('账户注销功能暂未开放，请联系客服处理');
+        }
+        
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                messageEl.innerHTML = '';
+            }, 3000);
+        }
+        
+        // 监听设置变化，自动保存
+        document.querySelectorAll('input[type="checkbox"], select').forEach(element => {
+            element.addEventListener('change', () => {
+                // 可以选择自动保存或等待用户点击保存按钮
+                // saveSettings();
+            });
+        });
+    </script>
+</body>
+</html>

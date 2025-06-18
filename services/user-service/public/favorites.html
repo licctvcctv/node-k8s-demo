@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的收藏 - 云原生商城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: #1890ff;
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+        
+        .nav-menu a:hover {
+            opacity: 1;
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #1890ff;
+            font-weight: 600;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 10px 15px;
+            color: #666;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu a:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .sidebar-menu a.active {
+            background: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+        
+        .main-content {
+            flex: 1;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .filter-bar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .filter-tab {
+            padding: 5px 15px;
+            cursor: pointer;
+            color: #666;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .filter-tab.active {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .sort-select {
+            padding: 5px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 20px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .favorite-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        
+        .favorite-btn:hover {
+            background: rgba(0,0,0,0.7);
+            transform: scale(1.1);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+        
+        .product-info {
+            padding: 15px;
+        }
+        
+        .product-name {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+            height: 40px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .product-price {
+            font-size: 18px;
+            color: #f5222d;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 6px 12px;
+            border: 1px solid #d9d9d9;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+        
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+            border-color: #1890ff;
+        }
+        
+        .btn-primary:hover {
+            background: #40a9ff;
+            border-color: #40a9ff;
+            color: white;
+        }
+        
+        .empty-state {
+            background: white;
+            padding: 60px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            color: #999;
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .stock-out {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div id="nav-container"></div>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">🛍️ 云原生商城</a>
+            <nav class="nav-menu">
+                <a href="/">首页</a>
+                <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30082'); return false;">商品中心</a>
+                <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30083'); return false;">我的订单</a>
+                <a href="/help.html">帮助中心</a>
+            </nav>
+            <div class="user-menu">
+                <div class="user-avatar" id="headerAvatar">U</div>
+                <span id="headerUsername">用户</span>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <aside class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="/profile.html">👤 个人信息</a></li>
+                <li><a href="/orders.html">📦 我的订单</a></li>
+                <li><a href="/addresses.html">📍 收货地址</a></li>
+                <li><a href="/favorites.html" class="active">❤️ 我的收藏</a></li>
+                <li><a href="/security.html">🔒 账户安全</a></li>
+                <li><a href="/settings.html">⚙️ 账户设置</a></li>
+            </ul>
+        </aside>
+        
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">我的收藏</h1>
+            </div>
+            
+            <div class="filter-bar">
+                <div class="filter-tabs">
+                    <div class="filter-tab active" onclick="filterProducts('all')">全部商品</div>
+                    <div class="filter-tab" onclick="filterProducts('available')">有货</div>
+                    <div class="filter-tab" onclick="filterProducts('discount')">降价</div>
+                </div>
+                <select class="sort-select" onchange="sortProducts(this.value)">
+                    <option value="time">收藏时间</option>
+                    <option value="price-asc">价格从低到高</option>
+                    <option value="price-desc">价格从高到低</option>
+                </select>
+            </div>
+            
+            <div id="favoritesList">
+                <!-- 收藏商品列表将在这里动态加载 -->
+            </div>
+        </main>
+    </div>
+    
+    <script src="/auth.js"></script>
+    <script>
+        const PRODUCT_SERVICE_URL = 'http://' + window.location.hostname + ':30082';
+        let favorites = [];
+        let products = [];
+        let currentFilter = 'all';
+        let currentSort = 'time';
+        
+        window.onload = function() {
+            if (!AUTH.initPage(true)) {
+                return;
+            }
+            
+            loadUserInfo();
+            loadFavorites();
+        };
+        
+        function loadUserInfo() {
+            const user = AUTH.getUser();
+            if (user) {
+                document.getElementById('headerUsername').textContent = user.username;
+                document.getElementById('headerAvatar').textContent = user.username[0].toUpperCase();
+            }
+        }
+        
+        async function loadFavorites() {
+            // 从localStorage加载收藏数据（实际应该从后端API）
+            const savedFavorites = localStorage.getItem('userFavorites');
+            if (savedFavorites) {
+                favorites = JSON.parse(savedFavorites);
+            } else {
+                // 模拟一些默认收藏
+                favorites = ['prod-1', 'prod-3', 'prod-5'];
+                localStorage.setItem('userFavorites', JSON.stringify(favorites));
+            }
+            
+            // 加载商品数据
+            try {
+                const response = await fetch(`${PRODUCT_SERVICE_URL}/api/products`);
+                const allProducts = await response.json();
+                
+                // 筛选收藏的商品
+                products = allProducts.filter(p => favorites.includes(p.id));
+                
+                // 添加一些模拟属性
+                products = products.map(p => ({
+                    ...p,
+                    favoriteTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    originalPrice: p.price + Math.floor(Math.random() * 100),
+                    isDiscounted: Math.random() > 0.5
+                }));
+                
+                displayFavorites();
+            } catch (error) {
+                console.error('加载商品失败:', error);
+            }
+        }
+        
+        function filterProducts(filter) {
+            currentFilter = filter;
+            
+            // 更新标签状态
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            displayFavorites();
+        }
+        
+        function sortProducts(sort) {
+            currentSort = sort;
+            displayFavorites();
+        }
+        
+        function displayFavorites() {
+            let displayProducts = [...products];
+            
+            // 应用筛选
+            switch (currentFilter) {
+                case 'available':
+                    displayProducts = displayProducts.filter(p => p.stock > 0);
+                    break;
+                case 'discount':
+                    displayProducts = displayProducts.filter(p => p.isDiscounted);
+                    break;
+            }
+            
+            // 应用排序
+            switch (currentSort) {
+                case 'price-asc':
+                    displayProducts.sort((a, b) => a.price - b.price);
+                    break;
+                case 'price-desc':
+                    displayProducts.sort((a, b) => b.price - a.price);
+                    break;
+                case 'time':
+                default:
+                    displayProducts.sort((a, b) => new Date(b.favoriteTime) - new Date(a.favoriteTime));
+            }
+            
+            const favoritesListEl = document.getElementById('favoritesList');
+            
+            if (displayProducts.length === 0) {
+                favoritesListEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">❤️</div>
+                        <p>暂无收藏的商品</p>
+                        <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30082'); return false;" class="btn btn-primary" style="margin-top: 20px; display: inline-block; width: auto;">去逛逛</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            favoritesListEl.innerHTML = `
+                <div class="product-grid">
+                    ${displayProducts.map(product => `
+                        <div class="product-card">
+                            <div class="favorite-btn" onclick="removeFavorite('${product.id}')" title="取消收藏">
+                                ❤️
+                            </div>
+                            <div class="product-image" onclick="viewProduct('${product.id}')">
+                                ${getProductIcon(product.name)}
+                            </div>
+                            ${product.stock === 0 ? '<div class="stock-out">已售罄</div>' : ''}
+                            <div class="product-info">
+                                <div class="product-name">${product.name}</div>
+                                <div class="product-price">
+                                    ¥${product.price}
+                                    ${product.isDiscounted ? `<span style="text-decoration: line-through; color: #999; font-size: 14px; margin-left: 10px;">¥${product.originalPrice}</span>` : ''}
+                                </div>
+                                <div class="product-actions">
+                                    <button class="btn btn-primary" onclick="addToCart('${product.id}')" ${product.stock === 0 ? 'disabled' : ''}>
+                                        加入购物车
+                                    </button>
+                                    <button class="btn" onclick="buyNow('${product.id}')" ${product.stock === 0 ? 'disabled' : ''}>
+                                        立即购买
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        function getProductIcon(name) {
+            const icons = {
+                'iPhone': '📱',
+                'MacBook': '💻',
+                'AirPods': '🎧',
+                '相机': '📷',
+                '手表': '⌚',
+                '图书': '📚',
+                '键盘': '⌨️',
+                '椅子': '🪑'
+            };
+            
+            for (const [key, icon] of Object.entries(icons)) {
+                if (name.includes(key)) {
+                    return icon;
+                }
+            }
+            return '📦';
+        }
+        
+        function removeFavorite(productId) {
+            if (!confirm('确定要取消收藏吗？')) return;
+            
+            favorites = favorites.filter(id => id !== productId);
+            products = products.filter(p => p.id !== productId);
+            
+            localStorage.setItem('userFavorites', JSON.stringify(favorites));
+            displayFavorites();
+        }
+        
+        function viewProduct(productId) {
+            AUTH.redirectWithToken(`http://${window.location.hostname}:30082/product.html?id=${productId}`);
+        }
+        
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            
+            // 获取购物车
+            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            
+            // 检查是否已在购物车
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    quantity: 1
+                });
+            }
+            
+            localStorage.setItem('cart', JSON.stringify(cart));
+            alert('已加入购物车！');
+        }
+        
+        function buyNow(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            
+            // 添加到购物车并跳转
+            addToCart(productId);
+            AUTH.redirectWithToken(`http://${window.location.hostname}:30082/cart.html`);
+        }
+    </script>
+</body>
+</html>

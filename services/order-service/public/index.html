@@ -535,9 +535,10 @@
             // 检查是否是直接购买
             checkDirectBuy();
             
-            if (!AUTH.getToken()) {
-                document.getElementById('authNotice').style.display = 'block';
-            }
+            // Demo项目，不显示认证提示
+            // if (!AUTH.getToken()) {
+            //     document.getElementById('authNotice').style.display = 'block';
+            // }
         };
         
         // 显示消息
@@ -666,20 +667,18 @@
                         创建时间: ${new Date(order.createdAt).toLocaleString()}
                         ${order.updatedAt ? `<br>更新时间: ${new Date(order.updatedAt).toLocaleString()}` : ''}
                     </div>
-                    ${AUTH.getToken() && order.userId === AUTH.getUser()?.username ? `
-                        <div class="order-actions">
-                            ${order.status === 'pending' ? `
-                                <button class="btn btn-primary" onclick="updateOrderStatus('${order.id}', 'paid')">支付订单</button>
-                                <button class="btn btn-danger" onclick="updateOrderStatus('${order.id}', 'cancelled')">取消订单</button>
-                            ` : ''}
-                            ${order.status === 'paid' ? `
-                                <button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'shipped')">发货</button>
-                            ` : ''}
-                            ${order.status === 'shipped' ? `
-                                <button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'delivered')">确认收货</button>
-                            ` : ''}
-                        </div>
-                    ` : ''}
+                    <div class="order-actions">
+                        ${order.status === 'pending' ? `
+                            <button class="btn btn-primary" onclick="updateOrderStatus('${order.id}', 'paid')">支付订单</button>
+                            <button class="btn btn-danger" onclick="updateOrderStatus('${order.id}', 'cancelled')">取消订单</button>
+                        ` : ''}
+                        ${order.status === 'paid' ? `
+                            <button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'shipped')">发货</button>
+                        ` : ''}
+                        ${order.status === 'shipped' ? `
+                            <button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'delivered')">确认收货</button>
+                        ` : ''}
+                    </div>
                 </div>
             `).join('');
         }
@@ -711,9 +710,10 @@
         
         // 显示添加模态框
         function showAddModal() {
-            if (!AUTH.checkAuth()) {
-                return;
-            }
+            // Demo项目，不检查认证
+            // if (!AUTH.checkAuth()) {
+            //     return;
+            // }
             
             document.getElementById('modalTitle').textContent = '创建订单';
             document.getElementById('orderForm').reset();
@@ -876,15 +876,15 @@
                 const quantity = parseInt(urlParams.get('quantity')) || 1;
                 
                 if (productId && productName && productPrice) {
-                    // 检查登录状态
-                    if (!AUTH.getToken()) {
-                        showMessage('请先登录再购买', 'error');
-                        setTimeout(() => {
-                            sessionStorage.setItem('redirect_after_login', window.location.href);
-                            AUTH.redirectWithToken('http://' + window.location.hostname + ':30081/login.html');
-                        }, 1500);
-                        return;
-                    }
+                    // Demo项目，不检查登录状态
+                    // if (!AUTH.getToken()) {
+                    //     showMessage('请先登录再购买', 'error');
+                    //     setTimeout(() => {
+                    //         sessionStorage.setItem('redirect_after_login', window.location.href);
+                    //         AUTH.redirectWithToken('http://' + window.location.hostname + ':30081/login.html');
+                    //     }, 1500);
+                    //     return;
+                    // }
                     
                     // 自动打开创建订单模态框
                     setTimeout(() => {
@@ -900,9 +900,10 @@
         
         // 显示直接购买模态框
         function showDirectBuyModal(productId, productName, productPrice, quantity) {
-            if (!AUTH.checkAuth()) {
-                return;
-            }
+            // Demo项目，不检查认证
+            // if (!AUTH.checkAuth()) {
+            //     return;
+            // }
             
             document.getElementById('modalTitle').textContent = '立即购买';
             document.getElementById('orderForm').reset();

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - 云原生商城</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .page-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            margin-right: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #52c41a;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #73d13d;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 150px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .product-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .product-price {
+            font-size: 20px;
+            color: #f5222d;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .product-stock {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .btn-edit {
+            background: #1890ff;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #ff4d4f;
+            color: white;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .close-btn {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        
+        .error {
+            background: #fff2e8;
+            border: 1px solid #ffbb96;
+            color: #fa541c;
+        }
+    </style>
+</head>
+<body>
+    <div id="nav-container"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1 class="page-title">📦 商品管理</h1>
+            <p>管理商城中的所有商品信息</p>
+        </div>
+        
+        <div id="message"></div>
+        
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索商品名称..." onkeyup="searchProducts()">
+            </div>
+            <button class="btn btn-primary" onclick="showAddModal()">+ 添加商品</button>
+        </div>
+        
+        <div id="productGrid" class="product-grid">
+            <!-- 商品列表将在这里动态加载 -->
+        </div>
+    </div>
+    
+    <!-- 添加/编辑商品模态框 -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">添加商品</h2>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label for="productName">商品名称</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label for="productDescription">商品描述</label>
+                    <textarea id="productDescription" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="productPrice">价格</label>
+                    <input type="number" id="productPrice" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="productStock">库存</label>
+                    <input type="number" id="productStock" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="productCategory">分类</label>
+                    <select id="productCategory" required>
+                        <option value="">选择分类</option>
+                        <option value="电子产品">电子产品</option>
+                        <option value="图书">图书</option>
+                        <option value="服装">服装</option>
+                        <option value="家居">家居</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">保存</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/auth.js"></script>
+    <script>
+        const PRODUCT_SERVICE_URL = 'http://' + window.location.hostname + ':30082';
+        let products = [];
+        
+        window.onload = function() {
+            AUTH.initPage(false);
+            loadProducts();
+        };
+        
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${PRODUCT_SERVICE_URL}/api/products`);
+                products = await response.json();
+                displayProducts(products);
+            } catch (error) {
+                showMessage('加载商品失败', 'error');
+            }
+        }
+        
+        function displayProducts(productsToShow) {
+            const grid = document.getElementById('productGrid');
+            if (productsToShow.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #999;">暂无商品</p>';
+                return;
+            }
+            
+            grid.innerHTML = productsToShow.map(product => `
+                <div class="product-card">
+                    <div class="product-image">${getProductIcon(product.name)}</div>
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-price">¥${product.price}</div>
+                    <div class="product-stock">库存: ${product.stock}</div>
+                    <div class="product-actions">
+                        <button class="btn btn-sm btn-edit" onclick="editProduct('${product.id}')">编辑</button>
+                        <button class="btn btn-sm btn-delete" onclick="deleteProduct('${product.id}')">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function searchProducts() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(keyword) || 
+                p.description.toLowerCase().includes(keyword)
+            );
+            displayProducts(filtered);
+        }
+        
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '添加商品';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+        
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+            
+            document.getElementById('modalTitle').textContent = '编辑商品';
+            document.getElementById('productId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productDescription').value = product.description;
+            document.getElementById('productPrice').value = product.price;
+            document.getElementById('productStock').value = product.stock;
+            document.getElementById('productCategory').value = product.category || '';
+            document.getElementById('productModal').style.display = 'flex';
+        }
+        
+        async function deleteProduct(id) {
+            if (!confirm('确定要删除这个商品吗？')) return;
+            
+            try {
+                const response = await fetch(`${PRODUCT_SERVICE_URL}/api/products/${id}`, {
+                    method: 'DELETE',
+                    headers: AUTH.getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    showMessage('商品删除成功', 'success');
+                    loadProducts();
+                } else {
+                    showMessage('删除失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误', 'error');
+            }
+        }
+        
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const productId = document.getElementById('productId').value;
+            const productData = {
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                stock: parseInt(document.getElementById('productStock').value),
+                category: document.getElementById('productCategory').value
+            };
+            
+            try {
+                const url = productId 
+                    ? `${PRODUCT_SERVICE_URL}/api/products/${productId}`
+                    : `${PRODUCT_SERVICE_URL}/api/products`;
+                    
+                const method = productId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: AUTH.getAuthHeaders(),
+                    body: JSON.stringify(productData)
+                });
+                
+                if (response.ok) {
+                    showMessage(productId ? '商品更新成功' : '商品添加成功', 'success');
+                    closeModal();
+                    loadProducts();
+                } else {
+                    showMessage('操作失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误', 'error');
+            }
+        });
+        
+        function closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+        
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                messageEl.innerHTML = '';
+            }, 3000);
+        }
+        
+        function getProductIcon(name) {
+            const icons = {
+                'iPhone': '📱',
+                'MacBook': '💻',
+                'AirPods': '🎧',
+                '相机': '📷',
+                '手表': '⌚',
+                '图书': '📚',
+                '键盘': '⌨️',
+                '椅子': '🪑'
+            };
+            
+            for (const [key, icon] of Object.entries(icons)) {
+                if (name.includes(key)) {
+                    return icon;
+                }
+            }
+            return '📦';
+        }
+        
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('productModal')) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -67,7 +67,7 @@ async function verifyToken(req, res, next) {
 }
 
 // Create order
-app.post('/api/orders', verifyToken, async (req, res) => {
+app.post('/api/orders', async (req, res) => {
   try {
     const { items, shippingAddress, notes } = req.body;
 
@@ -115,7 +115,7 @@ app.post('/api/orders', verifyToken, async (req, res) => {
     // Create order
     const order = {
       id: uuidv4(),
-      userId: req.user.username,
+      userId: 'demo-user',  // Demo项目，使用默认用户
       items: orderItems,
       totalAmount,
       shippingAddress: shippingAddress || '',
@@ -148,7 +148,7 @@ app.post('/api/orders', verifyToken, async (req, res) => {
     await redisClient.set(`order:${order.id}`, JSON.stringify(order));
     
     // Add to user's orders
-    await redisClient.sAdd(`user:${req.user.username}:orders`, order.id);
+    await redisClient.sAdd(`user:demo-user:orders`, order.id);
 
     res.status(201).json(order);
   } catch (error) {
@@ -210,7 +210,7 @@ app.get('/api/orders', async (req, res) => {
 });
 
 // Get order by ID
-app.get('/api/orders/:id', verifyToken, async (req, res) => {
+app.get('/api/orders/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const orderData = await redisClient.get(`order:${id}`);
@@ -221,10 +221,7 @@ app.get('/api/orders/:id', verifyToken, async (req, res) => {
 
     const order = JSON.parse(orderData);
 
-    // Check if order belongs to user
-    if (order.userId !== req.user.username) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    // Demo项目，不检查用户权限
 
     res.json(order);
   } catch (error) {
@@ -234,7 +231,7 @@ app.get('/api/orders/:id', verifyToken, async (req, res) => {
 });
 
 // Update order status
-app.put('/api/orders/:id/status', verifyToken, async (req, res) => {
+app.put('/api/orders/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -251,10 +248,7 @@ app.put('/api/orders/:id/status', verifyToken, async (req, res) => {
 
     const order = JSON.parse(orderData);
 
-    // Check if order belongs to user
-    if (order.userId !== req.user.username) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    // Demo项目，不检查用户权限
 
     // Update status
     order.status = status;

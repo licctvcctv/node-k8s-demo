@@ -34,10 +34,8 @@ const AUTH = {
     checkAuth() {
         const token = this.getToken();
         if (!token) {
-            alert('请先登录');
-            // 保存当前页面URL，登录后返回
-            sessionStorage.setItem('redirect_after_login', window.location.href);
-            window.location.href = `http://${window.location.hostname}:30081/login.html`;
+            // Demo项目，不强制跳转登录
+            console.log('Demo模式: 未登录状态');
             return false;
         }
         return token;
@@ -139,11 +137,11 @@ const AUTH = {
                         </button>
                     </div>
                     <div>
-                        <span style="margin-right: 15px;">欢迎，${user ? user.username : '游客'}</span>
-                        <button onclick="AUTH.logout()" 
+                        <span style="margin-right: 15px;">欢迎，${user ? user.username : 'Demo用户'}</span>
+                        ${user ? `<button onclick="AUTH.logout()" 
                                 style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
                             退出登录
-                        </button>
+                        </button>` : ''}
                     </div>
                 </div>
             </nav>
