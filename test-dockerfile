@@ -1,0 +1,55 @@
+# 测试Dockerfile来验证npm安装是否正常工作
+FROM node:18-alpine
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制package.json
+COPY services/user-service/package.json ./
+
+# 模拟修复过程
+RUN set -e && \
+    echo "Testing npm install fix..." && \
+    \
+    # 清理npm缓存
+    npm cache clean --force && \
+    \
+    # 删除可能有问题的锁文件
+    rm -f package-lock.json npm-shrinkwrap.json && \
+    \
+    # 配置npm设置
+    npm config set registry https://registry.npmjs.org/ && \
+    npm config delete proxy || true && \
+    npm config delete https-proxy || true && \
+    npm config set strict-ssl false && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 3 && \
+    \
+    # 安装npm最新版本
+    npm install -g npm@latest && \
+    \
+    # 安装依赖
+    npm install --production --no-audit --no-fund --verbose && \
+    \
+    # 验证安装结果
+    echo "Verification:" && \
+    ls -la node_modules/ | head -10 && \
+    \
+    # 检查关键模块
+    for module in express redis cors jsonwebtoken bcryptjs; do \
+        if [ -d "node_modules/$module" ]; then \
+            echo "✅ $module installed"; \
+        else \
+            echo "❌ $module missing"; \
+        fi; \
+    done
+
+# 复制应用代码
+COPY services/user-service/index.js ./
+
+# 暴露端口
+EXPOSE 8081
+
+# 启动应用
+CMD ["node", "index.js"]
