@@ -1,3 +1,8 @@
+#!/bin/bash
+echo "修复auth.js并上传到GitHub..."
+
+# 确保auth.js是正确的版本
+cat > services/shared/auth.js << 'EOF'
 // 云原生商城 - 统一认证模块（修复跨端口问题）
 // 解决跨端口token共享问题
 
@@ -182,3 +187,6 @@ const AUTH = {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = AUTH;
 }
+EOF
+
+echo "auth.js已修复！"
