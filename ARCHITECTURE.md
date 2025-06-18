@@ -94,19 +94,19 @@ Client (with JWT) → Order Service → User Service (验证JWT)
 
 ### 虚拟机分配
 ```
-VM1 (Master) - 192.168.1.10
+VM1 (Master) - 192.168.200.128
 ├── K3s Master
 ├── Jenkins
 ├── Prometheus
 └── Grafana
 
-VM2 (Worker1) - 192.168.1.11
+VM2 (Worker1) - 192.168.200.132
 ├── K3s Worker
 ├── User Service (副本1)
 ├── Product Service (副本1)
 └── Order Service (副本1)
 
-VM3 (Worker2) - 192.168.1.12
+VM3 (Worker2) - 192.168.200.150
 ├── K3s Worker
 ├── Redis
 ├── User Service (副本2)
