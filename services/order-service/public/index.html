@@ -401,12 +401,13 @@
     </style>
 </head>
 <body>
-    <div class="header">
+    <div id="nav-container"></div>
+    <div class="header" style="display: none;">
         <h1>🛒 订单管理系统</h1>
         <p>云原生微服务商城 - 订单服务</p>
         <div class="nav-links">
-            <a href="#" onclick="window.location.href='http://'+window.location.hostname+':30081'; return false;">👤 用户中心</a>
-            <a href="#" onclick="window.location.href='http://'+window.location.hostname+':30082'; return false;">📦 商品管理</a>
+            <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30081'); return false;">👤 用户中心</a>
+            <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30082'); return false;">📦 商品管理</a>
         </div>
     </div>
     
@@ -414,7 +415,7 @@
         <div id="message"></div>
         
         <div id="authNotice" class="auth-notice" style="display: none;">
-            ⚠️ 请先<a href="#" onclick="window.location.href='http://'+window.location.hostname+':30081'; return false;" style="color: #fa8c16; font-weight: bold;">登录</a>后再进行订单管理操作
+            ⚠️ 请先<a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30081/login.html'); return false;" style="color: #fa8c16; font-weight: bold;">登录</a>后再进行订单管理操作
         </div>
         
         <div class="stats">
@@ -516,19 +517,22 @@
         </div>
     </div>
     
+    <script src="/auth.js"></script>
     <script>
         const API_URL = window.location.origin;
         const PRODUCT_SERVICE_URL = 'http://' + window.location.hostname + ':30082';
         let orders = [];
         let products = [];
-        let currentToken = localStorage.getItem('token');
-        let currentUser = localStorage.getItem('username');
         
         // 页面加载时获取数据
         window.onload = function() {
+            // 初始化页面（不需要强制登录）
+            AUTH.initPage(false);
+            
             loadOrders();
             loadProducts();
-            if (!currentToken) {
+            
+            if (!AUTH.getToken()) {
                 document.getElementById('authNotice').style.display = 'block';
             }
         };
@@ -657,7 +661,7 @@
                         创建时间: ${new Date(order.createdAt).toLocaleString()}
                         ${order.updatedAt ? `<br>更新时间: ${new Date(order.updatedAt).toLocaleString()}` : ''}
                     </div>
-                    ${currentToken && order.userId === currentUser ? `
+                    ${AUTH.getToken() && order.userId === AUTH.getUser()?.username ? `
                         <div class="order-actions">
                             ${order.status === 'pending' ? `
                                 <button class="btn btn-primary" onclick="updateOrderStatus('${order.id}', 'paid')">支付订单</button>
@@ -702,11 +706,7 @@
         
         // 显示添加模态框
         function showAddModal() {
-            if (!currentToken) {
-                showMessage('请先登录', 'error');
-                setTimeout(() => {
-                    window.location.href = 'http://' + window.location.hostname + ':30081';
-                }, 1500);
+            if (!AUTH.checkAuth()) {
                 return;
             }
             
@@ -811,10 +811,7 @@
             try {
                 const response = await fetch(`${API_URL}/api/orders`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
-                    },
+                    headers: AUTH.getAuthHeaders(),
                     body: JSON.stringify(orderData)
                 });
                 
@@ -838,10 +835,7 @@
             try {
                 const response = await fetch(`${API_URL}/api/orders/${orderId}/status`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
-                    },
+                    headers: AUTH.getAuthHeaders(),
                     body: JSON.stringify({ status: newStatus })
                 });
                 

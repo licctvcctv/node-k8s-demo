@@ -502,6 +502,7 @@
     </style>
 </head>
 <body>
+    <div id="nav-container"></div>
     <div class="admin-layout">
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -673,28 +674,25 @@
         </div>
     </div>
     
+    <script src="/auth.js"></script>
     <script>
         const API_URL = window.location.origin;
         let products = [];
         let filteredProducts = [];
         let currentPage = 1;
         const pageSize = 10;
-        let currentToken = localStorage.getItem('token');
-        let currentUser = localStorage.getItem('username');
         
         // 页面加载时检查登录状态
         window.onload = function() {
-            if (!currentToken) {
-                showMessage('请先登录', 'error');
-                setTimeout(() => {
-                    window.location.href = 'http://' + window.location.hostname + ':30081/login.html?return=' + encodeURIComponent(window.location.href);
-                }, 1500);
+            // 初始化认证（需要登录）
+            if (!AUTH.initPage(true)) {
                 return;
             }
             
             // 设置用户头像
-            if (currentUser) {
-                document.getElementById('userAvatar').textContent = currentUser[0].toUpperCase();
+            const user = AUTH.getUser();
+            if (user) {
+                document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
             }
             
             loadProducts();
@@ -884,10 +882,7 @@
                 
                 const response = await fetch(url, {
                     method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
-                    },
+                    headers: AUTH.getAuthHeaders(),
                     body: JSON.stringify(productData)
                 });
                 
@@ -912,7 +907,7 @@
                 const response = await fetch(`${API_URL}/api/products/${id}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${currentToken}`
+                        'Authorization': AUTH.getToken() ? `Bearer ${AUTH.getToken()}` : ''
                     }
                 });
                 

@@ -33,6 +33,11 @@ app.use(morgan('combined'));
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve shared auth.js
+app.get('/auth.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../shared/auth.js'));
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'user-service' });
@@ -160,12 +165,75 @@ app.get('/api/profile', verifyToken, async (req, res) => {
   }
 });
 
+// Initialize default data
+async function initDefaultData() {
+  try {
+    console.log('Initializing default users...');
+    
+    // Check if admin exists
+    const adminExists = await redisClient.exists('user:admin');
+    if (!adminExists) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const adminUser = {
+        id: 'admin',
+        username: 'admin',
+        email: 'admin@cloudshop.com',
+        password: hashedPassword,
+        role: 'admin',
+        createdAt: new Date().toISOString()
+      };
+      await redisClient.set(`user:admin`, JSON.stringify(adminUser));
+      console.log('Created default admin user (username: admin, password: admin123)');
+    }
+    
+    // Check if demo user exists
+    const demoExists = await redisClient.exists('user:demo');
+    if (!demoExists) {
+      const hashedPassword = await bcrypt.hash('demo123', 10);
+      const demoUser = {
+        id: 'demo',
+        username: 'demo',
+        email: 'demo@cloudshop.com',
+        password: hashedPassword,
+        role: 'user',
+        createdAt: new Date().toISOString()
+      };
+      await redisClient.set(`user:demo`, JSON.stringify(demoUser));
+      console.log('Created default demo user (username: demo, password: demo123)');
+    }
+    
+    // Check if test user exists
+    const testExists = await redisClient.exists('user:test');
+    if (!testExists) {
+      const hashedPassword = await bcrypt.hash('test123', 10);
+      const testUser = {
+        id: 'test',
+        username: 'test',
+        email: 'test@cloudshop.com',
+        password: hashedPassword,
+        role: 'user',
+        createdAt: new Date().toISOString()
+      };
+      await redisClient.set(`user:test`, JSON.stringify(testUser));
+      console.log('Created default test user (username: test, password: test123)');
+    }
+    
+  } catch (error) {
+    console.error('Error initializing default data:', error);
+  }
+}
+
 // Start server
 async function start() {
   try {
     await connectRedis();
+    await initDefaultData();
     app.listen(PORT, () => {
       console.log(`User service running on port ${PORT}`);
+      console.log('Default users:');
+      console.log('  - Admin: username=admin, password=admin123');
+      console.log('  - Demo: username=demo, password=demo123');
+      console.log('  - Test: username=test, password=test123');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

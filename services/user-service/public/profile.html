@@ -391,13 +391,14 @@
     </style>
 </head>
 <body>
+    <div id="nav-container"></div>
     <header class="header">
         <div class="header-content">
             <a href="/" class="logo">🛍️ 云原生商城</a>
             <nav class="nav-menu">
                 <a href="/">首页</a>
-                <a href="#" onclick="window.location.href='http://'+window.location.hostname+':30082'; return false;">商品中心</a>
-                <a href="#" onclick="window.location.href='http://'+window.location.hostname+':30083'; return false;">我的订单</a>
+                <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30082'); return false;">商品中心</a>
+                <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30083'); return false;">我的订单</a>
                 <a href="/help.html">帮助中心</a>
             </nav>
             <div class="user-menu">
@@ -546,23 +547,26 @@
         </main>
     </div>
     
+    <script src="/auth.js"></script>
     <script>
         const API_URL = window.location.origin;
-        const token = localStorage.getItem('token');
-        const username = localStorage.getItem('username');
         
-        // 检查登录状态
-        if (!token) {
-            window.location.href = '/login.html?return=' + encodeURIComponent(window.location.pathname);
-        }
+        // 页面初始化
+        window.onload = function() {
+            // 初始化认证（需要登录）
+            if (!AUTH.initPage(true)) {
+                return;
+            }
+            
+            // 加载用户信息
+            loadProfile();
+        };
         
         // 加载用户信息
         async function loadProfile() {
             try {
                 const response = await fetch(`${API_URL}/api/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: AUTH.getAuthHeaders()
                 });
                 
                 if (response.ok) {
@@ -581,9 +585,7 @@
                     document.getElementById('infoCreatedAt').textContent = new Date(user.createdAt).toLocaleDateString();
                 } else {
                     // Token无效，重新登录
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('username');
-                    window.location.href = '/login.html';
+                    AUTH.handleApiError({ status: response.status });
                 }
             } catch (error) {
                 console.error('加载用户信息失败', error);
@@ -592,11 +594,7 @@
         
         // 退出登录
         function logout() {
-            if (confirm('确定要退出登录吗？')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('username');
-                window.location.href = '/';
-            }
+            AUTH.logout();
         }
         
         // 编辑头像
@@ -613,9 +611,6 @@
         function changePassword() {
             window.location.href = '/change-password.html';
         }
-        
-        // 页面加载时执行
-        loadProfile();
     </script>
 </body>
 </html>

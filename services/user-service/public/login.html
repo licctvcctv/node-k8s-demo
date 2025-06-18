@@ -302,6 +302,7 @@
         </div>
     </div>
     
+    <script src="/auth.js"></script>
     <script>
         const API_URL = window.location.origin;
         
@@ -367,9 +368,13 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // 保存token
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('username', username);
+                    // 使用AUTH模块保存认证信息
+                    AUTH.saveAuth(data.token, {
+                        id: data.user.id,
+                        username: data.user.username,
+                        email: data.user.email,
+                        role: data.user.role || 'user'
+                    });
                     
                     // 记住用户名
                     if (remember) {
@@ -380,10 +385,11 @@
                     
                     showMessage('登录成功！正在跳转...', 'success');
                     
-                    // 跳转到个人中心或之前的页面
+                    // 跳转到个人中心或之前保存的页面
                     setTimeout(() => {
-                        const returnUrl = urlParams.get('return') || '/profile.html';
-                        window.location.href = returnUrl;
+                        const redirectUrl = sessionStorage.getItem('redirect_after_login') || '/profile.html';
+                        sessionStorage.removeItem('redirect_after_login');
+                        window.location.href = redirectUrl;
                     }, 1000);
                 } else {
                     showMessage(data.error || '登录失败，请检查用户名和密码', 'error');

@@ -423,7 +423,8 @@
     </style>
 </head>
 <body>
-    <header class="header">
+    <div id="nav-container"></div>
+    <header class="header" style="display: none;">
         <div class="header-content">
             <nav class="nav">
                 <a href="/" class="logo">
@@ -441,7 +442,7 @@
                         🛒
                         <span class="cart-count" id="cartCount">0</span>
                     </div>
-                    <a href="#" onclick="window.location.href='http://'+window.location.hostname+':30081/profile.html'; return false;">个人中心</a>
+                    <a href="#" onclick="AUTH.redirectWithToken('http://'+window.location.hostname+':30081/profile.html'); return false;">个人中心</a>
                 </div>
             </nav>
         </div>
@@ -535,12 +536,15 @@
         </div>
     </footer>
     
+    <script src="/auth.js"></script>
     <script>
         const API_URL = window.location.origin;
         let products = [];
         
         // 页面加载时获取数据
         window.onload = function() {
+            // 初始化页面（不需要强制登录）
+            AUTH.initPage(false);
             loadHotProducts();
             updateCartCount();
         };

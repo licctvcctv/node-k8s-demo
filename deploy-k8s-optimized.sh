@@ -14,6 +14,7 @@ IMAGES=(
   "cloud-shop/user-service:latest"
   "cloud-shop/product-service:latest"
   "cloud-shop/order-service:latest"
+  "cloud-shop/dashboard-service:latest"
 )
 
 # 颜色输出
@@ -92,7 +93,7 @@ echo ""
 echo "3️⃣  构建Docker镜像..."
 cd services
 
-for service in user-service product-service order-service; do
+for service in user-service product-service order-service dashboard-service; do
     echo -e "${YELLOW}构建 $service...${NC}"
     cd $service
     docker build -t cloud-shop/$service:latest .
@@ -200,7 +201,7 @@ kubectl wait --for=condition=ready pod -l app=redis -n $NAMESPACE --timeout=60s 
 # 部署服务
 echo ""
 echo "7️⃣  部署微服务..."
-for service in user-service product-service order-service; do
+for service in user-service product-service order-service dashboard-service; do
     echo "部署 $service..."
     kubectl apply -f k8s/$service/deployment.yaml
     show_progress "$service 部署完成"
@@ -251,6 +252,7 @@ NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="
 echo "用户服务: http://$NODE_IP:30081"
 echo "商品服务: http://$NODE_IP:30082"
 echo "订单服务: http://$NODE_IP:30083"
+echo "监控面板: http://$NODE_IP:30084"
 
 # 监控Pod状态
 echo ""

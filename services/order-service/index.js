@@ -34,6 +34,11 @@ app.use(morgan('combined'));
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve shared auth.js
+app.get('/auth.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../shared/auth.js'));
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'order-service' });
@@ -264,12 +269,120 @@ app.put('/api/orders/:id/status', verifyToken, async (req, res) => {
   }
 });
 
+// Initialize default data
+async function initDefaultData() {
+  try {
+    console.log('Initializing default orders...');
+    
+    const defaultOrders = [
+      {
+        id: 'order-demo-1',
+        userId: 'demo',
+        items: [
+          {
+            productId: 'prod-1',
+            productName: 'iPhone 15 Pro',
+            quantity: 1,
+            price: 9999
+          }
+        ],
+        totalAmount: 9999,
+        status: 'delivered',
+        shippingAddress: '北京市朝阳区云原生大道1号',
+        notes: '演示订单 - 已完成',
+        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'order-demo-2',
+        userId: 'demo',
+        items: [
+          {
+            productId: 'prod-4',
+            productName: '云原生架构设计',
+            quantity: 2,
+            price: 89
+          },
+          {
+            productId: 'prod-5',
+            productName: 'Kubernetes实战',
+            quantity: 1,
+            price: 79
+          }
+        ],
+        totalAmount: 257,
+        status: 'shipped',
+        shippingAddress: '上海市浦东新区容器路88号',
+        notes: '技术书籍订单',
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'order-test-1',
+        userId: 'test',
+        items: [
+          {
+            productId: 'prod-3',
+            productName: 'AirPods Pro 2',
+            quantity: 1,
+            price: 1899
+          }
+        ],
+        totalAmount: 1899,
+        status: 'paid',
+        shippingAddress: '广州市天河区微服务街520号',
+        notes: '生日礼物',
+        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'order-admin-1',
+        userId: 'admin',
+        items: [
+          {
+            productId: 'prod-7',
+            productName: '机械键盘',
+            quantity: 2,
+            price: 599
+          },
+          {
+            productId: 'prod-8',
+            productName: '人体工学椅',
+            quantity: 1,
+            price: 2999
+          }
+        ],
+        totalAmount: 4197,
+        status: 'pending',
+        shippingAddress: '深圳市南山区DevOps大厦',
+        notes: '办公设备采购',
+        createdAt: new Date().toISOString()
+      }
+    ];
+    
+    // 添加默认订单
+    for (const order of defaultOrders) {
+      const exists = await redisClient.exists(`order:${order.id}`);
+      if (!exists) {
+        await redisClient.set(`order:${order.id}`, JSON.stringify(order));
+        console.log(`Created order: ${order.id} for user ${order.userId}`);
+      }
+    }
+    
+    console.log('Default orders initialized');
+    
+  } catch (error) {
+    console.error('Error initializing default data:', error);
+  }
+}
+
 // Start server
 async function start() {
   try {
     await connectRedis();
+    await initDefaultData();
     app.listen(PORT, () => {
       console.log(`Order service running on port ${PORT}`);
+      console.log('Default orders initialized - 4 sample orders created');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

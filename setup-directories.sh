@@ -12,6 +12,7 @@ echo "📁 创建目录结构..."
 mkdir -p services/user-service/public
 mkdir -p services/product-service/public
 mkdir -p services/order-service/public
+mkdir -p services/dashboard-service/public
 mkdir -p services/shared
 mkdir -p k8s
 mkdir -p scripts
@@ -24,7 +25,7 @@ echo ""
 echo "📋 检查关键文件..."
 
 # 检查Dockerfile
-for service in user-service product-service order-service; do
+for service in user-service product-service order-service dashboard-service; do
     if [ ! -f "services/$service/Dockerfile" ]; then
         echo "⚠️  缺少: services/$service/Dockerfile"
     else
@@ -33,7 +34,7 @@ for service in user-service product-service order-service; do
 done
 
 # 检查index.js
-for service in user-service product-service order-service; do
+for service in user-service product-service order-service dashboard-service; do
     if [ ! -f "services/$service/index.js" ]; then
         echo "⚠️  缺少: services/$service/index.js"
     else
@@ -42,7 +43,7 @@ for service in user-service product-service order-service; do
 done
 
 # 检查package.json
-for service in user-service product-service order-service; do
+for service in user-service product-service order-service dashboard-service; do
     if [ ! -f "services/$service/package.json" ]; then
         echo "⚠️  缺少: services/$service/package.json"
     else
@@ -80,6 +81,12 @@ if [ ! -f "k8s/order-service/deployment.yaml" ]; then
     echo "⚠️  缺少: k8s/order-service/deployment.yaml"
 else
     echo "✅ k8s/order-service/deployment.yaml"
+fi
+
+if [ ! -f "k8s/dashboard-service/deployment.yaml" ]; then
+    echo "⚠️  缺少: k8s/dashboard-service/deployment.yaml"
+else
+    echo "✅ k8s/dashboard-service/deployment.yaml"
 fi
 
 # 检查前端页面

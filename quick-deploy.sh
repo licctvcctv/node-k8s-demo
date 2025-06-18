@@ -16,6 +16,7 @@ IMAGES=(
   "cloud-shop/user-service:latest"
   "cloud-shop/product-service:latest"
   "cloud-shop/order-service:latest"
+  "cloud-shop/dashboard-service:latest"
 )
 
 # 检查函数
@@ -63,7 +64,7 @@ echo ""
 echo "2️⃣  构建Docker镜像..."
 cd services
 
-for service in user-service product-service order-service; do
+for service in user-service product-service order-service dashboard-service; do
     echo -e "${YELLOW}构建 $service...${NC}"
     cd $service
     if docker build -t cloud-shop/$service:latest .; then
@@ -131,6 +132,7 @@ echo "部署微服务..."
 kubectl apply -f k8s/user-service/deployment.yaml
 kubectl apply -f k8s/product-service/deployment.yaml
 kubectl apply -f k8s/order-service/deployment.yaml
+kubectl apply -f k8s/dashboard-service/deployment.yaml
 show_progress "微服务部署完成"
 
 # 6. 等待Pod就绪
@@ -166,6 +168,7 @@ NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="
 echo "用户服务: http://$NODE_IP:30081"
 echo "商品服务: http://$NODE_IP:30082"
 echo "订单服务: http://$NODE_IP:30083"
+echo "监控面板: http://$NODE_IP:30084"
 
 echo ""
 echo "🎉 部署完成！"
