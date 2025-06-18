@@ -191,69 +191,14 @@ deploy_microservices() {
     # 订单服务
     deploy_service "order-service" 8083 30083 "redis://redis:6379" ""
     
-    # 监控服务（包含真实Dashboard）
-    cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: dashboard-service
-  namespace: $NAMESPACE
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: dashboard-service
-  template:
-    metadata:
-      labels:
-        app: dashboard-service
-    spec:
-      containers:
-      - name: dashboard-service
-        image: node:16-alpine
-        workingDir: /app
-        command: ["sh", "-c"]
-        args:
-          - "npm install && npm start"
-        ports:
-        - containerPort: 8084
-        env:
-        - name: PORT
-          value: "8084"
-        - name: REDIS_URL
-          value: "redis://redis:6379"
+    # 监控服务（使用统一的部署函数）
+    deploy_service "dashboard-service" 8084 30084 "redis://redis:6379" '
         - name: USER_SERVICE_URL
           value: "http://user-service:8081"
         - name: PRODUCT_SERVICE_URL
           value: "http://product-service:8082"
         - name: ORDER_SERVICE_URL
-          value: "http://order-service:8083"
-        volumeMounts:
-        - name: app-code
-          mountPath: /app
-        resources:
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-      volumes:
-      - name: app-code
-        hostPath:
-          path: $PROJECT_DIR/services/dashboard-service
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dashboard-service
-  namespace: $NAMESPACE
-spec:
-  selector:
-    app: dashboard-service
-  ports:
-  - port: 8084
-    targetPort: 8084
-    nodePort: 30084
-  type: NodePort
-EOF
+          value: "http://order-service:8083"'
 }
 
 # 通用服务部署函数 - 修复版，确保服务能正常启动
@@ -289,18 +234,50 @@ data:
     const app = express();
     const PORT = process.env.PORT || $container_port;
     
+    // 健康检查
     app.get('/health', (req, res) => {
       res.json({ status: 'ok', service: '$service_name' });
     });
     
+    // 主页
     app.get('/', (req, res) => {
-      res.send('<h1>${service_name} is running!</h1>');
+      res.send('<h1>${service_name} is running!</h1><p>Port: ' + PORT + '</p>');
     });
     
-    app.use(express.static('/app/public'));
+    // API端点
+    app.get('/api/status', (req, res) => {
+      res.json({ 
+        service: '$service_name',
+        status: 'running',
+        port: PORT,
+        timestamp: new Date().toISOString()
+      });
+    });
     
-    app.listen(PORT, () => {
+    // 静态文件（如果存在）
+    const fs = require('fs');
+    if (fs.existsSync('/app/public')) {
+      app.use(express.static('/app/public'));
+    }
+    
+    // 错误处理
+    app.use((err, req, res, next) => {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    });
+    
+    // 启动服务器
+    const server = app.listen(PORT, () => {
       console.log('$service_name running on port ' + PORT);
+    });
+    
+    // 优雅关闭
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
     });
 ---
 apiVersion: apps/v1
@@ -327,8 +304,14 @@ spec:
             # 复制基础代码
             cp /config/* /app/
             cd /app
+            # 配置npm使用淘宝镜像（解决网络问题）
+            npm config set registry https://registry.npmmirror.com
             # 安装依赖
-            npm install --production
+            npm install --production --no-audit --verbose || {
+              echo "npm install failed, using fallback..."
+              # 如果失败，至少安装express
+              npm install express@4.18.2 --no-save --registry https://registry.npmmirror.com || true
+            }
             # 如果有主机代码，复制过来（覆盖基础代码）
             if [ -d /host-code ] && [ "$(ls -A /host-code 2>/dev/null)" ]; then
               cp -r /host-code/* /app/ || true
@@ -366,14 +349,18 @@ spec:
           httpGet:
             path: /health
             port: $container_port
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /health
             port: $container_port
-          initialDelaySeconds: 10
-          periodSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
       volumes:
       - name: app-code
         emptyDir: {}
@@ -403,18 +390,42 @@ EOF
 
 # 等待Pod启动
 wait_for_pods() {
-    echo "等待Pod初始化（30秒）..."
-    sleep 30
+    echo "等待Pod初始化（60秒）..."
+    sleep 60
     
     echo "检查Pod状态..."
     kubectl get pods -n $NAMESPACE -o wide
     
-    echo "等待所有Pod就绪（最多5分钟）..."
-    if kubectl wait --for=condition=ready pod --all -n $NAMESPACE --timeout=300s; then
-        show_progress "所有Pod已就绪"
-    else
-        show_warning "部分Pod可能未就绪，但继续部署过程"
-    fi
+    echo "等待Pod准备就绪..."
+    # 多次检查Pod状态
+    for i in {1..6}; do
+        echo "第 $i 次检查（共6次）..."
+        kubectl get pods -n $NAMESPACE
+        
+        # 检查是否有CrashLoopBackOff的Pod
+        if kubectl get pods -n $NAMESPACE | grep -E "(CrashLoopBackOff|Error)" > /dev/null; then
+            show_warning "发现有问题的Pod，查看日志..."
+            # 获取第一个有问题的Pod的日志
+            problem_pod=$(kubectl get pods -n $NAMESPACE --no-headers | grep -E "(CrashLoopBackOff|Error)" | head -1 | awk '{print $1}')
+            if [ ! -z "$problem_pod" ]; then
+                echo "Pod $problem_pod 的日志："
+                kubectl logs $problem_pod -n $NAMESPACE --tail=20 || true
+            fi
+        fi
+        
+        # 如果所有Pod都在运行，跳出循环
+        if kubectl get pods -n $NAMESPACE --no-headers | awk '{print $3}' | grep -v "Running" | grep -v "Completed" > /dev/null; then
+            echo "还有Pod未就绪，等待30秒..."
+            sleep 30
+        else
+            show_progress "所有Pod已就绪"
+            break
+        fi
+    done
+    
+    # 最终状态
+    echo "最终Pod状态："
+    kubectl get pods -n $NAMESPACE -o wide
 }
 
 # 部署Jenkins CI/CD - 修复版，自动配置用户和Pipeline
